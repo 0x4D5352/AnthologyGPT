@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "anthology-gpt"
+version = "0.1.0"
+description = "Like Dwarf Fortress' history generator, but less efficient."
+authors = ["Joshua Nussbaum <67082011+joshuanussbaum@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.8.2"
+requests = "^2.32.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
