@@ -1,6 +1,52 @@
-from character import Character
-from faction import Faction
-from era import Era
+from __future__ import annotations
+from utils import OpenAI
+
+
+class Era:
+    def __init__(self, name: str, duration: int, theme: str) -> None:
+        self.name = name
+        self.duration = duration
+        self.theme = theme
+        self._year = 0
+        self._events = None
+        self._conversations = None
+        self._lost_history = None
+
+
+class Faction:
+    def __init__(self, name: str, description: str) -> None:
+        self.name = name
+        self.description = description
+
+    def __str__(self) -> str:
+        return f"Name: {self.name}\nDescription: {self.description}"
+
+    def __repr__(self) -> str:
+        return f"Faction(name={self.name}, description={self.description})"
+
+
+class Character:
+    def __init__(
+        self, name: str, age: str, gender: str, personality: str, faction: str
+    ):
+        self.name: str = name
+        self.age: int = int(age)
+        self.gender: str = gender
+        self.personality: str = personality
+        self.faction: str = faction
+        self._conversations: dict[Character | list[Character], OpenAI] = {}
+        self._memory: OpenAI = OpenAI()
+
+    def __str__(self) -> str:
+        return f"Name: {self.name}\nAge: {self.age}\nGender: {self.gender}\nPersonality: {self.personality}\nFaction: {self.faction}"
+
+    def __repr__(self) -> str:
+        return f"Character(name={self.name}, age={self.age}, gender={self.gender}, personality={self.personality}, faction={self.faction})"
+
+    def have_conversation(self, characters: Character | list[Character]) -> None:
+        if characters not in self._conversations:
+            self._conversations[characters] = OpenAI()
+        raise NotImplementedError
 
 
 class Anthology:
@@ -10,7 +56,7 @@ class Anthology:
         name: str,
         setting: str,
         anthology_type: str,
-        factions: list[Faction],
+        factions: set[Faction],
         characters: list[Character],
         year: int = 0,
         era: Era | None = None,
@@ -31,6 +77,21 @@ class Anthology:
 
     def __repr__(self) -> str:
         return f"Anthology(name={self.name}, setting={self.setting}, anthology_type={self.anthology_type}, factions={self.factions}, characters={self.characters})"
+
+    def add_faction(self, faction: Faction) -> None:
+        if faction in self.factions:
+            return
+        self.factions.add(faction)
+
+    def remove_faction(self, name: str) -> None:
+        if name not in [faction.name for faction in self.factions]:
+            return
+        target = None
+        for faction in self.factions:
+            if faction.name == name:
+                target = faction
+        if target is not None:
+            self.factions.remove(target)
 
 
 def generate_anthology() -> Anthology:
@@ -53,7 +114,7 @@ def generate_anthology() -> Anthology:
     print(
         "Next, identify at least two factions you want to be involved in your Anthology."
     )
-    factions: list[Faction] = []
+    factions: set[Faction] = set()
     while True:
         print(
             "Example factions:\n- Fantasy Races (Elves,Dwarves,Humans,Goblins)\n- Noble Houses/Clans/Kingdoms\n- Corporations"
@@ -62,7 +123,7 @@ def generate_anthology() -> Anthology:
         if faction == "":
             break
         description = input("Enter faction description:\n> ")
-        factions.append(Faction(name=faction, description=description))
+        factions.add(Faction(name=faction, description=description))
     print(
         "Finally, provide at least two characters you want to interact as part of your stories."
     )

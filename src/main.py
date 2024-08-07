@@ -1,6 +1,4 @@
-from anthology import Anthology, generate_anthology
-from character import Character
-from faction import Faction
+from anthology import Anthology, generate_anthology, Character, Faction
 
 
 def main(interactive: bool = True) -> None:
@@ -11,12 +9,12 @@ def main(interactive: bool = True) -> None:
             "Anthology",
             "Fantasy",
             "Endless Desert",
-            [
+            {
                 Faction("Elves", "A wise and ancient race of tall, slender humanoids."),
                 Faction("Dwarves", "A short and sturdy race of miners and craftsmen."),
                 Faction("Humans", "The most common and adaptable of all the races."),
                 Faction("Goblins", "A mischievous and cunning race of scavengers."),
-            ],
+            },
             [
                 Character(
                     name="Alice",
