@@ -1,32 +1,36 @@
-class Character:
-    def __init__(
-        self, name: str, age: str, gender: str, personality: str, faction: str
-    ):
-        self.name = name
-        self.age = age
-        self.gender = gender
-        self.personality = personality
-        self.faction = faction
+from character import Character
+from faction import Faction
+from era import Era
 
 
 class Anthology:
+    # TODO: add a docstring
     def __init__(
         self,
         name: str,
         setting: str,
         anthology_type: str,
-        factions: list[str],
+        factions: list[Faction],
         characters: list[Character],
+        year: int = 0,
+        era: Era | None = None,
+        # TODO: make a history class
+        history: str | None = None,
     ) -> None:
         self.name = name
         self.setting = setting
         self.anthology_type = anthology_type
         self.factions = factions
         self.characters = characters
-        self.year = 0
+        self._year = year
+        self._era = era
+        self._history = history
 
     def __str__(self) -> str:
-        return f"Name: {self.name}\nSetting: {self.setting}\nAnthology Type: {self.anthology_type}\nFactions: {self.factions}\nCharacters: {self.characters}"
+        return f"Name: {self.name}\nSetting: {self.setting}\nAnthology Type: {self.anthology_type}\nFactions:\n- {"\n- ".join([faction.__str__() for faction in self.factions])}\nCharacters:\n{"\n".join([character.__str__() for character in self.characters])}"
+
+    def __repr__(self) -> str:
+        return f"Anthology(name={self.name}, setting={self.setting}, anthology_type={self.anthology_type}, factions={self.factions}, characters={self.characters})"
 
 
 def generate_anthology() -> Anthology:
@@ -41,15 +45,15 @@ def generate_anthology() -> Anthology:
         "Example settings:\n- Fantasy\n- Victorian\n- Cyberpunk\n- Science Fiction\n> "
     )
     print(
-        "Now, let's design your Anthology's theme. What type of Anthology will your characters inhabit?"
+        "Now, let's design your Anthology's \"world\". What type of Anthology will your characters inhabit?"
     )
     anthology_type: str = input(
-        "Example Anthologys:\n- Endless Desert/Ocean\n- Endless Metropolis\n- Earth-like\n> "
+        "Example types:\n- Endless Desert/Ocean\n- Endless Metropolis\n- Earth-like\n> "
     )
     print(
         "Next, identify at least two factions you want to be involved in your Anthology."
     )
-    factions: list[str] = []
+    factions: list[Faction] = []
     while True:
         print(
             "Example factions:\n- Fantasy Races (Elves,Dwarves,Humans,Goblins)\n- Noble Houses/Clans/Kingdoms\n- Corporations"
@@ -57,7 +61,8 @@ def generate_anthology() -> Anthology:
         faction = input("Enter faction name or enter nothing to end.\n> ")
         if faction == "":
             break
-        factions.append(faction)
+        description = input("Enter faction description:\n> ")
+        factions.append(Faction(name=faction, description=description))
     print(
         "Finally, provide at least two characters you want to interact as part of your stories."
     )
