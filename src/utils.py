@@ -112,6 +112,12 @@ class OpenAI(LLM):
         return super().adjust_setting(key, value)
 
 
+class Ollama(LLM):
+    def __init__(self, source: str, endpoint: str, headers: dict[str, str]) -> None:
+        super().__init__(source, endpoint, headers)
+        raise NotImplementedError
+
+
 def main():
     client = OpenAI()
     _ = client.generate_completion("Let me know if this is working!")

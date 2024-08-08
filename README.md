@@ -40,19 +40,21 @@ the more thought you put into the first (and subsequent) generations, the less g
 
 This is where you set up the whole thing. Current implementation is guided generation, shortlist feature is a config file that can both be created and read by the app
 
-- An Anthology has five initial components:
+
+- An Anthology has six components:
     1. Name - An identifier to distinguish this from other anthologies you generate
     2. Setting - A rough list of adjectives to help set the tone for the anthology
     3. Anthology Type - The physical characteristics of the space your characters inhabit
+    4. Era - A certain period of time within your Anthology that is comprised of Factions and Characters, exploring a specific theme.
+        - The theme can be specific, like "The death of Character X", "The Cataclysm", or "War between Faction A and Faction B", but can also be more broad, like "Love" or "Sunlight"
     4. Factions - The arbitrary distinguishing factors between different groups within your anthology.
-    5. Characters - The avatars that actually inhabit your anthology and represent the changes that occur within the progression of time.
+    5. Characters - The avatars that actually inhabit your anthology and represent the changes that occur within each Era.
+
 
 After your anthology has been created, you enter into the main loop of AnthologyGPT:
 
 ## Phase Two: Passage of Time
 
-In this stage, you determine how much time passes between the current year of the Anthology and the end of the Era your characters inhabit, and what the theme for this Era will be.
-The theme can be specific, like "The death of Character X", "The Cataclysm", or "War between Faction A and Faction B", but can also be more broad, like "Love" or "Sunlight"
 Time passes in whole-year increments, with longer passages of time resulting in fewer, but more significant events added to your Anthology.
 
 The passage of time is comprised of three parts:
