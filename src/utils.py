@@ -56,7 +56,7 @@ class LLM:
         }
         # self._session: requests.Session = requests.Session()
 
-    def generate_completion(self, prompt: str):
+    def generate_completion(self, role: str, prompt: str):
         raise NotImplementedError
 
     def generate_embeddings(self, input: str):
@@ -99,7 +99,12 @@ class OpenAI(LLM):
         self._settings["model"] = "gpt-4o"
         del headers
 
-    def generate_completion(self, prompt: str) -> dict[str, str]:
+    def generate_completion(
+        self, role: str = "user", prompt: str = ""
+    ) -> dict[str, str]:
+        if not prompt:
+            # do i even need a prompt? maybe conversations don't need them...
+            raise ValueError("prompt needed!")
         endpoint = self.endpoint + "chat/completions"
         request = EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY.copy()
         for setting in self._settings.keys():
@@ -115,6 +120,7 @@ class OpenAI(LLM):
                 f"OpenAI refused to generate a completion! Reason: {response_message["refusal"]}"
             )
         del response_message["refusal"], self._messages[-1]
+        response_message["role"] = role
         self.add_message(response_message)
         return self._messages[-1]
 

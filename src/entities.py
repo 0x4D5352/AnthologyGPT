@@ -1,25 +1,26 @@
+from __future__ import annotations
 from utils import OpenAI
 
 
 class Character:
     def __init__(
-        self, name: str, age: str, pronouns: str, personality: str, faction: Faction
+        self, name: str, age: str, pronouns: str, personality: str, description: str
     ):
         self.name: str = name
         self.age: int = int(age)
         self.pronouns: str = pronouns
         self.personality: str = personality
-        self.faction: Faction = faction
+        self.description: str = description
         self._conversations: dict[Character | set[Character], list[OpenAI]] = {}
         self._memory: OpenAI = OpenAI()
         self._feelings: OpenAI = OpenAI()
-        self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.faction}. Your personality is {self.personality}."
+        self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is {self.personality}."
 
     def __str__(self) -> str:
-        return f"Name: {self.name}\nAge: {self.age}\nGender: {self.pronouns}\nPersonality: {self.personality}\nFaction: {self.faction}"
+        return f"Name: {self.name}\nAge: {self.age}\nGender: {self.pronouns}\nPersonality: {self.personality}\nDescription: {self.description}"
 
     def __repr__(self) -> str:
-        return f"Character(name={self.name}, age={self.age}, gender={self.pronouns}, personality={self.personality}, faction={self.faction})"
+        return f"Character(name={self.name}, age={self.age}, gender={self.pronouns}, personality={self.personality}, description={self.description})"
 
     def start_conversation(self, characters: Character | set[Character]) -> int:
         """
@@ -56,7 +57,7 @@ class Character:
         self._conversations[characters][conversation_index].add_message(
             {
                 "role": "system",
-                "message": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. The user is providing you withe most recent message in the conversation, and you are expected to reply in character.",
+                "message": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user.",
             }
         )
         del (
@@ -78,19 +79,27 @@ class Character:
         current_thoughts.add_message({"role": "memories", "message": relevant_memories})
         relevant_feelings = self.feel(context)
         current_thoughts.add_message({"role": "feelings", "message": relevant_feelings})
-        conclusion = current_thoughts.generate_completion(context)
+        conclusion = current_thoughts.generate_completion(self.name, context)
         return conclusion["message"]
 
-    def remember(self, context: str | Character | OpenAI) -> str:
+    def remember(self, context: str) -> str:
         return ""
 
     def feel(self, context: str) -> str:
         return ""
 
     def speak(
-        self, characters: Character | set[Character], conversation_index: int
+        self,
+        context: str,
+        characters: Character | set[Character],
+        conversation_index: int,
     ) -> dict[str, str]:
-        return {}
+        thoughts = self.think(context)
+        prompt = f"Context: {context}. Your Thoughts: {thoughts}"
+        message = self._conversations[characters][
+            conversation_index
+        ].generate_completion(self.name, prompt)
+        return message
 
     def listen(
         self,
