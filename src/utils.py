@@ -33,6 +33,11 @@ OPENAI_RESPONSE_SCHEMA = {
 
 
 class LLM:
+    """
+    A wrapper for a chain of interactions with a Large Language Model.
+
+    """
+
     def __init__(
         self,
         source: str,
@@ -50,6 +55,9 @@ class LLM:
             "stream": False,
         }
         # self._session: requests.Session = requests.Session()
+
+    def generate_response(self, prompt: str):
+        raise NotImplementedError
 
     def generate_completion(self, prompt: str):
         raise NotImplementedError
@@ -69,6 +77,20 @@ class LLM:
 
 
 class OpenAI(LLM):
+    """
+    A class representing a chain of interactions with OpenAI's LLM, ChatGPT
+
+    Attributes:
+        source: a short name to identify where the LLM is coming from
+        endpoint: the primary URL pointing towards the server that we send requests to.
+        headers: Key/Value pairs that get passed in the reque
+        _messages: a list holding the interactions with this instance of the model.
+        _settings: Key/Value pairs with the configuration options passed to the model.
+
+    Methods:
+        generate_completion(): Give a prompt and get a response, saving both to the message history.
+    """
+
     def __init__(self):
         headers = {
             "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -80,7 +102,7 @@ class OpenAI(LLM):
         self._settings["model"] = "gpt-4o"
         del headers
 
-    def generate_completion(self, prompt: str):
+    def generate_completion(self, prompt: str) -> dict[str, str]:
         endpoint = self.endpoint + "chat/completions"
         request = EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY.copy()
         for setting in self._settings.keys():
@@ -89,20 +111,21 @@ class OpenAI(LLM):
         self.add_message(message)
         request["messages"] = self._messages
         response = requests.post(url=endpoint, json=request, headers=self.headers)
+        # TODO: handle the case of a JSON error
         response_message = response.json()["choices"][0]["message"]
         if response_message["refusal"] is not None:
             raise ValueError(
                 f"OpenAI refused to generate a completion! Reason: {response_message["refusal"]}"
             )
-        del response_message["refusal"]
+        del response_message["refusal"], self._messages[-1]
         self.add_message(response_message)
-        # TODO: handle the case of a JSON error
         return self._messages[-1]
 
     def generate_embeddings(self, input: str | list[int]) -> list[list[float]]:
         # TODO: implement embeddings
         endpoint = self.endpoint + "embeddings"
         request = {"model": self._settings["model"], "inputs": input}
+        response = requests.post(url=endpoint, json=request, headers=self.headers)
         return [[0.0]]
 
     def add_message(self, message: dict[str, str]):
