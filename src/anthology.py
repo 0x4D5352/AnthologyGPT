@@ -2,15 +2,6 @@ from __future__ import annotations
 from utils import OpenAI
 
 
-class History:
-    def __init__(self) -> None:
-        self.actual_history = None
-        self.lost_history = None
-        self.remembered_history = None
-        self.legends = None
-        self.summary = None
-
-
 class Character:
     def __init__(
         self, name: str, age: str, pronouns: str, personality: str, faction: Faction
@@ -77,16 +68,19 @@ class Character:
         return conversation_index
 
     def think(self, context: str) -> str:
-        current_thought = OpenAI()
-        current_thought.add_message(
+        current_thoughts = OpenAI()
+        current_thoughts.add_message(
             {
                 "role": "system",
                 "message": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects how you would really respond.",
             }
         )
         relevant_memories = self.remember(context)
-        current_thought.add_message({"role": "memories", "message": relevant_memories})
-        return ""
+        current_thoughts.add_message({"role": "memories", "message": relevant_memories})
+        relevant_feelings = self.feel(context)
+        current_thoughts.add_message({"role": "feelings", "message": relevant_feelings})
+        conclusion = current_thoughts.generate_completion(context)
+        return conclusion["message"]
 
     def remember(self, context: str | Character | OpenAI) -> str:
         return ""
@@ -94,16 +88,28 @@ class Character:
     def feel(self, context: str) -> str:
         return ""
 
-    def speak(self, characters: Character | set[Character]) -> dict[str, str]:
+    def speak(
+        self, characters: Character | set[Character], conversation_index: int
+    ) -> dict[str, str]:
         return {}
 
     def listen(
         self,
         characters: Character | set[Character],
         conversation_index: int,
-        message: dict[str, str],
+        messages: list[dict[str, str]],
     ) -> None:
-        self._conversations[characters][conversation_index].add_message(message)
+        for message in messages:
+            self._conversations[characters][conversation_index].add_message(message)
+
+
+class History:
+    def __init__(self) -> None:
+        self.actual_history = None
+        self.lost_history = None
+        self.remembered_history = None
+        self.legends = None
+        self.summary = None
 
 
 class Faction:

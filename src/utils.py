@@ -56,9 +56,6 @@ class LLM:
         }
         # self._session: requests.Session = requests.Session()
 
-    def generate_response(self, prompt: str):
-        raise NotImplementedError
-
     def generate_completion(self, prompt: str):
         raise NotImplementedError
 
@@ -127,12 +124,6 @@ class OpenAI(LLM):
         request = {"model": self._settings["model"], "inputs": input}
         response = requests.post(url=endpoint, json=request, headers=self.headers)
         return [[0.0]]
-
-    def add_message(self, message: dict[str, str]):
-        return super().add_message(message)
-
-    def adjust_setting(self, key: str, value: str | int | bool) -> None:
-        return super().adjust_setting(key, value)
 
 
 class Ollama(LLM):
