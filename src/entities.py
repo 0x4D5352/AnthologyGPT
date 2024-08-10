@@ -54,10 +54,11 @@ class Character:
         else:
             list_of_characters = characters.name
         memory_of_characters = "nothing"
+        # memory_of_characters = self.remember(f"What do you remember about these people? {list_of_characters}")
         self._conversations[characters][conversation_index].add_message(
             {
                 "role": "system",
-                "message": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user.",
+                "message": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. If the conversation has gone on long enough, end your message with the string </SCENE>.",
             }
         )
         del (
@@ -79,7 +80,8 @@ class Character:
         current_thoughts.add_message({"role": "memories", "message": relevant_memories})
         relevant_feelings = self.feel(context)
         current_thoughts.add_message({"role": "feelings", "message": relevant_feelings})
-        conclusion = current_thoughts.generate_completion(self.name, context)
+        conclusion = current_thoughts.generate_completion(context)
+        del current_thoughts
         return conclusion["message"]
 
     def remember(self, context: str) -> str:
@@ -94,11 +96,17 @@ class Character:
         characters: Character | set[Character],
         conversation_index: int,
     ) -> dict[str, str]:
-        thoughts = self.think(context)
-        prompt = f"Context: {context}. Your Thoughts: {thoughts}"
+        """
+        generate a completion to add to the current conversation.
+        input context, characters, and conversation index.
+        output a response from the model as a dict of role and content
+        """
+        # thoughts = self.think(context)
+        # prompt = f"Context: {context}. Your Thoughts: {thoughts}"
+        prompt = f"Context: {context}."
         message = self._conversations[characters][
             conversation_index
-        ].generate_completion(self.name, prompt)
+        ].generate_completion(prompt, self.name)
         return message
 
     def listen(

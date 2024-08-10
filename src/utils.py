@@ -36,6 +36,18 @@ class LLM:
     """
     A wrapper for a chain of interactions with a Large Language Model.
 
+    Attributes:
+        source
+        endpoint
+        headers
+        _messages
+        settings
+
+    Methods:
+        generate_completion()
+        generate_embeddings()
+        add_message()
+        adjust_settings()
     """
 
     def __init__(
@@ -48,7 +60,7 @@ class LLM:
         self.endpoint: str = endpoint
         self.headers: dict[str, str] = headers
         self._messages: list[dict[str, str]] = []
-        self._settings: dict[str, str | int | bool] = {
+        self._settings: dict[str, str | int | float | bool] = {
             "model": "null",
             "temperature": 1,
             "top_p": 1,
@@ -56,16 +68,23 @@ class LLM:
         }
         # self._session: requests.Session = requests.Session()
 
-    def generate_completion(self, role: str, prompt: str):
+    def __repr__(self) -> str:
+        return f"LLM(source={self.source}, endpoint={self.endpoint}, headers={self.headers}, _messages={self._messages}, _settings={self._settings})"
+
+    def generate_completion(self, prompt: str, role: str):
         raise NotImplementedError
 
     def generate_embeddings(self, input: str):
         raise NotImplementedError
 
     def add_message(self, message: dict[str, str]) -> None:
+        """takes a dict (usually {"role": "user/assistant", "message": "contents"}) and appends it to self._messages,"""
         self._messages.append(message)
 
-    def adjust_setting(self, key: str, value: str | int | bool) -> None:
+    def adjust_setting(self, key: str, value: str | int | float | bool) -> None:
+        """
+        takes a key/value pair and updates the relevant setting for the LLM. won't allow changes to both temp AND top_p.
+        """
         if (key == "temperature" and self._settings["top_p"] != 1) or (
             key == "top_p" and self._settings["temperature"] != 1
         ):
@@ -85,7 +104,8 @@ class OpenAI(LLM):
         _settings: Key/Value pairs with the configuration options passed to the model.
 
     Methods:
-        generate_completion(): Give a prompt and get a response, saving both to the message history.
+        generate_completion(): Give a prompt (and optionally, a role) and get a response, saving both to the message history.
+        generate_embedding(): Give a string of text, a list of strings, a list of tokens (int), or a list of lists of tokens and get an embedding list in response.
     """
 
     def __init__(self):
@@ -99,9 +119,7 @@ class OpenAI(LLM):
         self._settings["model"] = "gpt-4o"
         del headers
 
-    def generate_completion(
-        self, role: str = "user", prompt: str = ""
-    ) -> dict[str, str]:
+    def generate_completion(self, prompt: str, role: str = "") -> dict[str, str]:
         if not prompt:
             # do i even need a prompt? maybe conversations don't need them...
             raise ValueError("prompt needed!")
@@ -120,16 +138,21 @@ class OpenAI(LLM):
                 f"OpenAI refused to generate a completion! Reason: {response_message["refusal"]}"
             )
         del response_message["refusal"], self._messages[-1]
-        response_message["role"] = role
+        if role:
+            response_message["role"] = role
         self.add_message(response_message)
         return self._messages[-1]
 
-    def generate_embeddings(self, input: str | list[int]) -> list[list[float]]:
+    def generate_embeddings(
+        self, input: str | list[str | int | list[int]]
+    ) -> list[dict[str, str | int | float]]:
         # TODO: implement embeddings
         endpoint = self.endpoint + "embeddings"
-        request = {"model": self._settings["model"], "inputs": input}
-        response = requests.post(url=endpoint, json=request, headers=self.headers)
-        return [[0.0]]
+        request = {"model": "text-embedding-ada-002", "inputs": input}
+        response = requests.post(
+            url=endpoint, json=request, headers=self.headers
+        ).json()
+        return response["data"]
 
 
 class Ollama(LLM):
