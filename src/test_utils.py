@@ -1,5 +1,6 @@
 import unittest
-from utils import LLM, OpenAI
+from json import load
+from utils import LLM, OpenAI, OPENAI_API_KEY
 
 
 class LLMTest(unittest.TestCase):
@@ -44,6 +45,20 @@ class OpenAITest(unittest.TestCase):
             open_ai.__repr__(),
             "LLM(source=OpenAI, endpoint=https://api.openai.com/v1/, headers={'Authorization': 'Bearer FOOBAR', 'Content-Type': 'application/json'}, _messages=[], _settings={'model': 'gpt-4o', 'temperature': 1, 'top_p': 1, 'stream': False})",
         )
+
+    def test_generate_completion(self):
+        open_ai = OpenAI()
+        response = open_ai.generate_completion("Are you ChatGPT?")
+        self.assertIn("ChatGPT", response["content"])
+
+    # TODO: implement test_generate_embeddings()
+
+    def test_generate_embeddings(self):
+        open_ai = OpenAI()
+        response = open_ai.generate_embeddings("This is a string of text to tokenize.")
+        with open("embedding.json", "r") as f:
+            test_file = load(f)
+        self.assertEqual(response, test_file)
 
 
 if __name__ == "__main__":

@@ -148,7 +148,7 @@ class OpenAI(LLM):
     ) -> list[dict[str, str | int | float]]:
         # TODO: implement embeddings
         endpoint = self.endpoint + "embeddings"
-        request = {"model": "text-embedding-ada-002", "inputs": input}
+        request = {"model": "text-embedding-ada-002", "input": input}
         response = requests.post(
             url=endpoint, json=request, headers=self.headers
         ).json()
