@@ -12,8 +12,9 @@ class Character:
         self.personality: str = personality
         self.description: str = description
         self._conversations: dict[Character | set[Character], list[OpenAI]] = {}
-        self._memory: OpenAI = OpenAI()
-        self._feelings: OpenAI = OpenAI()
+        # TODO: get these set up for embeddings. see remember/feel for more docs
+        self._memory: list[dict[str, str | int | list[float]]] | OpenAI = OpenAI()
+        self._feelings: list[dict[str, str | int | list[float]]] | OpenAI = OpenAI()
         self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is {self.personality}."
 
     def __str__(self) -> str:
@@ -85,9 +86,26 @@ class Character:
         return conclusion["message"]
 
     def remember(self, context: str) -> str:
+        """
+        This function accesses short and/or long-term memory, slightly modifying long-term memory when accessed.
+        thinking of having short term be an LLM chat session that gets removed after conversations, and long-term be embeddings.
+        alternately, having short-term and long-term both being embeddings.
+        I currently have a few ideas abouw how long term memory could be represented:
+
+        1. add a tiny offset to a token or to clusters of tokens (how much is too much) to represent drift.
+        2. execute another LLM call that takes the input, rewords it, and re-embeds it.
+        3. i could have a really small long term memory size and constantly summarize and re-embed the information.
+        """
         return ""
 
     def feel(self, context: str) -> str:
+        """
+        This function generates a response simulating the compulsive or instinctual responses.
+        The feelings will just be embeddings, but with something weird.
+        - maybe the calls have a really high termperature or a really high top_p
+        - maybe there's some sum-and-averaging of the embedding
+        - i could do some weird mutations
+        """
         return ""
 
     def speak(
