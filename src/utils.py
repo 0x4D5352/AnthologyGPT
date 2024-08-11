@@ -1,7 +1,7 @@
-from os import getenv
+from dotenv import load_dotenv
 import requests
 
-OPENAI_API_KEY = getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = load_dotenv()
 EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY = {
     "model": "foo-345",
     "temperature": 1,
@@ -77,7 +77,7 @@ class LLM:
         raise NotImplementedError
 
     def add_message(self, message: dict[str, str]) -> None:
-        """takes a dict (usually {"role": "user/assistant", "message": "contents"}) and appends it to self._messages,"""
+        """takes a dict ({"role": "system/user/assistant", "content": "message contents"}) and appends it to self._messages,"""
         self._messages.append(message)
 
     def adjust_setting(self, key: str, value: str | int | float | bool) -> None:
@@ -119,6 +119,9 @@ class OpenAI(LLM):
         del headers
 
     def generate_completion(self, prompt: str) -> dict[str, str]:
+        """
+        generate a chat completion response based on the prompt and the existing chat history for the model.
+        """
         if not prompt:
             # do i even need a prompt? maybe conversations don't need them...
             raise ValueError("prompt needed!")
@@ -138,11 +141,16 @@ class OpenAI(LLM):
             )
         del response_message["refusal"], self._messages[-1]
         self.add_message(response_message)
-        return self._messages[-1]
+        # to avoid user/assistant confusion in other conversations, we turn each assistant's response into a user-supplied message for other LLMs
+        response_message["role"] = "user"
+        return response_message
 
     def generate_embeddings(
         self, input: str | list[str | int | list[int]]
     ) -> list[dict[str, str | int | float]]:
+        """
+        generate an embedding for an input string, list of strings, list of tokens, or list of list of tokens.
+        """
         # TODO: implement embeddings
         endpoint = self.endpoint + "embeddings"
         request = {"model": "text-embedding-ada-002", "input": input}

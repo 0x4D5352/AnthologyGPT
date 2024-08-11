@@ -94,7 +94,21 @@ class CharacterTest(unittest.TestCase):
             "Bubbly and Outgoing",
             "man with brown hair and brown eyes",
         )
-        pass
+        char2 = Character(
+            "Sarah",
+            "21",
+            "She/Her",
+            "Logical and Calculating",
+            "woman with green hair and blue eyes",
+        )
+        convo = char.start_conversation(char2)
+        char._conversations[char2][convo].add_message(
+            {
+                "role": "user",
+                "content": "Sarah: Do you want to come to my birthday party?",
+            }
+        )
+        response = char.speak()
 
     def test_listen(self):
         char = Character(

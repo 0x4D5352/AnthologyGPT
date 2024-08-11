@@ -34,9 +34,6 @@ def generate_anthology() -> Anthology:
     anthology_type: str = input(
         "Example types:\n- Endless Desert/Ocean\n- Endless Metropolis\n- Earth-like\n> "
     )
-    print(
-        "Next, identify at least two factions you want to be involved in your Anthology."
-    )
     return Anthology(name, setting, anthology_type)
 
 
@@ -90,30 +87,3 @@ def main(interactive: bool = True) -> None:
 
 if __name__ == "__main__":
     main(False)
-
-
-"""
-
-            {
-                Faction("Elves", "A wise and ancient race of tall, slender humanoids."),
-                Faction("Dwarves", "A short and sturdy race of miners and craftsmen."),
-                Faction("Humans", "The most common and adaptable of all the races."),
-                Faction("Goblins", "A mischievous and cunning race of scavengers."),
-            },
-            [
-                Character(
-                    name="Alice",
-                    age="25",
-                    gender="female",
-                    personality="brave",
-                    faction="Elves",
-                ),
-                Character(
-                    name="Bob",
-                    age="30",
-                    gender="male",
-                    personality="wise",
-                    faction="Dwarves",
-                ),
-            ],
-    """
