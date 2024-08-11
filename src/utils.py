@@ -2,7 +2,6 @@ from os import getenv
 import requests
 
 OPENAI_API_KEY = getenv("OPENAI_API_KEY")
-
 EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY = {
     "model": "foo-345",
     "temperature": 1,
@@ -69,9 +68,9 @@ class LLM:
         # self._session: requests.Session = requests.Session()
 
     def __repr__(self) -> str:
-        return f"LLM(source={self.source}, endpoint={self.endpoint}, headers={self.headers}, _messages={self._messages}, _settings={self._settings})"
+        return f"LLM(source='{self.source}', endpoint='{self.endpoint}', headers={self.headers})"
 
-    def generate_completion(self, prompt: str, role: str):
+    def generate_completion(self, prompt: str):
         raise NotImplementedError
 
     def generate_embeddings(self, input: str):
@@ -119,7 +118,7 @@ class OpenAI(LLM):
         self._settings["model"] = "gpt-4o"
         del headers
 
-    def generate_completion(self, prompt: str, role: str = "") -> dict[str, str]:
+    def generate_completion(self, prompt: str) -> dict[str, str]:
         if not prompt:
             # do i even need a prompt? maybe conversations don't need them...
             raise ValueError("prompt needed!")
@@ -138,8 +137,6 @@ class OpenAI(LLM):
                 f"OpenAI refused to generate a completion! Reason: {response_message["refusal"]}"
             )
         del response_message["refusal"], self._messages[-1]
-        if role:
-            response_message["role"] = role
         self.add_message(response_message)
         return self._messages[-1]
 

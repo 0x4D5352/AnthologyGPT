@@ -1,6 +1,6 @@
 import unittest
 from json import load
-from utils import LLM, OpenAI, OPENAI_API_KEY
+from utils import LLM, OpenAI
 
 
 class LLMTest(unittest.TestCase):
@@ -8,13 +8,13 @@ class LLMTest(unittest.TestCase):
         llm = LLM("foo", "http://www.example.com", {"header1": "foo", "header2": "bar"})
         self.assertEqual(
             llm.__repr__(),
-            "LLM(source=foo, endpoint=http://www.example.com, headers={'header1': 'foo', 'header2': 'bar'}, _messages=[], _settings={'model': 'null', 'temperature': 1, 'top_p': 1, 'stream': False})",
+            "LLM(source='foo', endpoint='http://www.example.com', headers={'header1': 'foo', 'header2': 'bar'})",
         )
 
     def test_no_completion(self):
         llm = LLM("foo", "http://www.example.com", {"header1": "foo", "header2": "bar"})
         with self.assertRaises(NotImplementedError):
-            llm.generate_completion("test", "test")
+            llm.generate_completion("test")
 
     def test_no_embeddings(self):
         llm = LLM("foo", "http://www.example.com", {"header1": "foo", "header2": "bar"})
@@ -43,7 +43,7 @@ class OpenAITest(unittest.TestCase):
         open_ai.headers["Authorization"] = "Bearer FOOBAR"
         self.assertEqual(
             open_ai.__repr__(),
-            "LLM(source=OpenAI, endpoint=https://api.openai.com/v1/, headers={'Authorization': 'Bearer FOOBAR', 'Content-Type': 'application/json'}, _messages=[], _settings={'model': 'gpt-4o', 'temperature': 1, 'top_p': 1, 'stream': False})",
+            "LLM(source='OpenAI', endpoint='https://api.openai.com/v1/', headers={'Authorization': 'Bearer FOOBAR', 'Content-Type': 'application/json'})",
         )
 
     def test_generate_completion(self):
