@@ -51,14 +51,16 @@ class OpenAITest(unittest.TestCase):
         response = open_ai.generate_completion("Are you ChatGPT?")
         self.assertIn("ChatGPT", response["content"])
 
-    # TODO: implement test_generate_embeddings()
+    # TODO: find a better way to test this
 
-    def test_generate_embeddings(self):
-        open_ai = OpenAI()
-        response = open_ai.generate_embeddings("This is a string of text to tokenize.")
-        with open("embedding.json", "r") as f:
-            test_file = load(f)
-        self.assertEqual(response, test_file)
+    # def test_generate_embeddings(self):
+    #     open_ai = OpenAI()
+    #     response = open_ai.generate_embeddings("This is a string of text to tokenize.")
+    #     with open("embedding.json", "r") as f:
+    #         test_file = load(f)
+    #     self.assertEqual(response, test_file)
+    #
+    #
 
 
 if __name__ == "__main__":

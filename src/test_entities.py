@@ -109,7 +109,6 @@ class CharacterTest(unittest.TestCase):
             }
         )
         response = char.speak(
-            char.think("You don't have any plans, but you also don't have an outfit."),
             char2,
             convo,
         )

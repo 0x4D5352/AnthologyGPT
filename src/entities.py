@@ -141,9 +141,9 @@ class Character:
 
     def speak(
         self,
-        context: str,
         characters: Character | set[Character],
         conversation_index: int,
+        context: str = "",
     ) -> dict[str, str]:
         """
         generate a completion to add to the current conversation.
