@@ -1,4 +1,5 @@
-from anthology import Anthology, Era, Faction, Character
+from anthology import Anthology, Era
+from entities import Faction, Character
 
 
 def generate_setting() -> set:
@@ -37,40 +38,35 @@ def generate_anthology() -> Anthology:
     return Anthology(name, setting, anthology_type)
 
 
-def generate_era():
-    factions: set[Faction] = set()
-    while True:
-        print(
-            "Example factions:\n- Fantasy Races (Elves,Dwarves,Humans,Goblins)\n- Noble Houses/Clans/Kingdoms\n- Corporations"
-        )
-        faction = input("Enter faction name or enter nothing to end.\n> ")
-        if faction == "":
-            break
-        description = input("Enter faction description:\n> ")
-        factions.add(Faction(name=faction, description=description))
+def generate_era() -> Era:
+    name: str = input("Enter a name for your Era:\n> ")
+    duration: str = input("Enter a duration for your Era:\n> ")
+    theme: str = input("Enter a theme for your Era:\n> ")
+    return Era(name, int(duration), theme)
+
+
+def generate_faction() -> Faction:
     print(
-        "Finally, provide at least two characters you want to interact as part of your stories."
+        "Example factions:\n- Fantasy Races (Elves,Dwarves,Humans,Goblins)\n- Noble Houses/Clans/Kingdoms\n- Corporations"
     )
-    characters: list[Character] = []
-    still_generating_characters: bool = True
-    while still_generating_characters:
-        print("Enter character name or enter nothing to end.")
-        name = input("Character's Name:\n> ")
-        if name == "":
-            break
-        age = input("Character's age:\n> ")
-        gender = input("Character's gender:\n> ")
-        personality = input("Character's personality:\n> ")
-        faction = input("Character's faction\n> ")
-        characters.append(
-            Character(
-                name=name,
-                age=age,
-                pronouns=gender,
-                personality=personality,
-                faction=faction,
-            )
-        )
+    faction = input("Enter faction name.\n> ")
+    description = input("Enter faction description:\n> ")
+    return Faction(name=faction, description=description)
+
+
+def generate_characters():
+    name = input("Character's Name:\n> ")
+    age = input("Character's age:\n> ")
+    gender = input("Character's gender:\n> ")
+    personality = input("Character's personality:\n> ")
+    description = input("Character's description\n> ")
+    return Character(
+        name=name,
+        age=age,
+        pronouns=gender,
+        personality=personality,
+        description=description,
+    )
 
 
 def main(interactive: bool = True) -> None:
