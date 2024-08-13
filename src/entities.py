@@ -26,15 +26,15 @@ class Character:
         self, name: str, age: str, pronouns: str, personality: str, description: str
     ):
         self.name: str = name
-        self.age: int = int(age)
+        self.age: str = age
         self.pronouns: str = pronouns
         self.personality: str = personality
         self.description: str = description
         self._conversations: dict[Character | set[Character], list[OpenAI]] = {}
         # TODO: get these set up for embeddings. see remember/feel for more docs
-        self._memory: list[dict[str, str | int | list[float]]] | OpenAI = OpenAI()
-        self._feelings: list[dict[str, str | int | list[float]]] | OpenAI = OpenAI()
-        self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is {self.personality}."
+        self._memories: OpenAI = OpenAI()
+        self._feelings: OpenAI = OpenAI()
+        self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is: {self.personality}."
 
     def __repr__(self) -> str:
         return f"Character(name='{self.name}', age='{self.age}', gender='{self.pronouns}', personality='{self.personality}', description='{self.description}')"
@@ -73,12 +73,13 @@ class Character:
             del last_character
         else:
             list_of_characters = characters.name
-        memory_of_characters = "nothing"
-        # memory_of_characters = self.remember(f"What do you remember about these people? {list_of_characters}")
+        memory_of_characters = self.remember(
+            f"What do you remember about these people? {list_of_characters}"
+        )
         self._conversations[characters][conversation_index].add_message(
             {
                 "role": "system",
-                "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. If the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
+                "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
             }
         )
         del (
@@ -97,15 +98,20 @@ class Character:
         current_thoughts.add_message(
             {
                 "role": "system",
-                "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects how you would really respond.",
+                "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate.",
             }
         )
-        # relevant_memories = self.remember(context)
-        # current_thoughts.add_message({"role": "memories", "content": f"memories: {relevant_memories}"})
-        # relevant_feelings = self.feel(context)
-        # current_thoughts.add_message({"role": "feelings", "content": f"feeelings: {relevant_feelings}"})
+        relevant_memories = self.remember(context)
+        current_thoughts.add_message(
+            {"role": "user", "content": f"memories: {relevant_memories}"}
+        )
+        relevant_feelings = self.feel(context)
+        current_thoughts.add_message(
+            {"role": "user", "content": f"feeelings: {relevant_feelings}"}
+        )
         conclusion = current_thoughts.generate_completion(context)
         del current_thoughts
+        print(f"{self.name}'s conclusions: {conclusion["content"]}\n\n")
         return conclusion["content"]
 
     def remember(self, context: str) -> str:
@@ -120,7 +126,21 @@ class Character:
         2. execute another LLM call that takes the input, rewords it, and re-embeds it.
         3. i could have a really small long term memory size and constantly summarize and re-embed the information.
         """
-        raise NotImplementedError
+        indexer = OpenAI()
+        indexer.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
+            }
+        )
+        for message in self._memories._messages:
+            indexer.add_message(message)
+        response = indexer.generate_completion(
+            f"What memories are relevant to the context listed below? Do not quote them directly, only summarize and highlight key points. Limit your response to one paragraph or less. Context: {context}"
+        )
+        del indexer
+        print(f"{self.name} remembers this: {response["content"]}\n\n")
+        return response["content"]
 
     def feel(self, context: str) -> str:
         """
@@ -131,7 +151,21 @@ class Character:
         - maybe there's some sum-and-averaging of the embedding
         - i could do some weird mutations
         """
-        raise NotImplementedError
+        indexer = OpenAI()
+        indexer.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
+            }
+        )
+        for message in self._memories._messages:
+            indexer.add_message(message)
+        response = indexer.generate_completion(
+            f"What feelings are relevant to the context listed below? Do not quote them directly, only summarize and highlight key points. Limit your response to one paragraph or less. Context: {context}"
+        )
+        del indexer
+        print(f"{self.name} feels this: {response["content"]}\n\n")
+        return response["content"]
 
     def speak(
         self,
@@ -170,6 +204,45 @@ class Character:
             return
         for message in messages:
             self._conversations[characters][conversation_index].add_message(message)
+
+    def add_to_memories(self, conversation: list[dict[str, str]]) -> None:
+        summary = OpenAI()
+        summary.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+            }
+        )
+        for message in conversation:
+            summary.add_message(message)
+        response = summary.generate_completion(
+            "Summarize the conversation above. Limit your response to one paragraph, and only include the most essential information."
+        )["content"]
+        print(f"{self.name} remembers the convo like this: {response}")
+        self._memories.add_message({"role": "user", "content": response})
+
+    def add_to_feelings(self, conversation: list[dict[str, str]]) -> None:
+        summary = OpenAI()
+        summary.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+            }
+        )
+        for message in conversation:
+            summary.add_message(message)
+        response = summary.generate_completion(
+            "Summarize your feelings about the conversation above. Use abstract associations, connecting specific people or events with specific emotions."
+        )["content"]
+        print(f"{self.name} feels this about the convo: {response}")
+        self._memories.add_message({"role": "user", "content": response})
+
+    def end_conversation(
+        self, characters: Character | set[Character], conversation_index: int
+    ) -> None:
+        convo = self._conversations[characters][conversation_index]._messages
+        self.add_to_memories(convo)
+        self.add_to_feelings(convo)
 
 
 class Faction:

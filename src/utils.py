@@ -131,14 +131,18 @@ class OpenAI(LLM):
             message = {"role": "user", "content": prompt}
             self.add_message(message)
         request["messages"] = self._messages
-        response = requests.post(url=endpoint, json=request, headers=self.headers)
+        response = requests.post(
+            url=endpoint, json=request, headers=self.headers
+        ).json()
         # TODO: handle the case of a JSON error
-        response_message = response.json()["choices"][0]["message"]
+        response_message = response["choices"][0]["message"]
         if response_message["refusal"] is not None:
             raise ValueError(
                 f"OpenAI refused to generate a completion! Reason: {response_message["refusal"]}"
             )
-        del response_message["refusal"], self._messages[-1]
+        del response_message["refusal"]
+        if prompt:
+            del self._messages[-1]
         self.add_message(response_message)
         # to avoid user/assistant confusion in other conversations, we turn each assistant's response into a user-supplied message for other LLMs
         response_message["role"] = "user"

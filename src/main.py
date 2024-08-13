@@ -4,7 +4,7 @@ from entities import Faction, Character
 # TODO: add a "remember conversation" or "add memory" method to the characters
 
 
-def have_conversation() -> dict[str, str]:
+def have_conversation() -> list[dict[str, str]]:
     char1 = generate_characters()
     char2 = generate_characters()
     char1_index = char1.start_conversation(char2)
@@ -12,18 +12,28 @@ def have_conversation() -> dict[str, str]:
     last_message = char1.speak(
         char2,
         char1_index,
-        f"You just found out {char2.name} is having their birthday tomorrow!",
+        f"You and {char2} have finished fighting the final boss.",
     )
+    convo = []
+    convo.append(last_message)
     while True:
+        print(last_message["content"])
         if "</SCENE>" in last_message["content"]:
             break
-        print(last_message["content"])
         char2.listen(char1, char2_index, last_message)
         last_message = char2.speak(char1, char2_index)
+        convo.append(last_message)
         print(last_message["content"])
         char1.listen(char2, char1_index, last_message)
         last_message = char1.speak(char2, char1_index)
-    return last_message
+        convo.append(last_message)
+    char1.end_conversation(char2, char1_index)
+    char2.end_conversation(char1, char2_index)
+    print(f"{char1.name} memories:{char1._memories._messages}")
+    print(f"{char1.name} feelings:{char1._feelings._messages}")
+    print(f"{char2.name} memories:{char2._memories._messages}")
+    print(f"{char2.name} feelings:{char2._feelings._messages}")
+    return convo
 
 
 def generate_setting() -> set:
@@ -102,9 +112,8 @@ def main(interactive: bool = True) -> None:
             {"Fantasy"},
             "Endless Desert",
         )
-    print(anthology)
     ending = have_conversation()
-    print(ending["content"])
+    print("\n".join([message["content"] for message in ending]))
 
 
 if __name__ == "__main__":
