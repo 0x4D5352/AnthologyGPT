@@ -118,19 +118,17 @@ class OpenAI(LLM):
         self._settings["model"] = "gpt-4o"
         del headers
 
-    def generate_completion(self, prompt: str) -> dict[str, str]:
+    def generate_completion(self, prompt: str = "") -> dict[str, str]:
         """
         generate a chat completion response based on the prompt and the existing chat history for the model.
         """
-        if not prompt:
-            # do i even need a prompt? maybe conversations don't need them...
-            raise ValueError("prompt needed!")
         endpoint = self.endpoint + "chat/completions"
         request = EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY.copy()
         for setting in self._settings.keys():
             request[setting] = self._settings[setting]
-        message = {"role": "user", "content": prompt}
-        self.add_message(message)
+        if prompt:
+            message = {"role": "user", "content": prompt}
+            self.add_message(message)
         request["messages"] = self._messages
         response = requests.post(url=endpoint, json=request, headers=self.headers)
         # TODO: handle the case of a JSON error

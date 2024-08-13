@@ -37,13 +37,13 @@ class CharacterTest(unittest.TestCase):
         john_response = [
             {
                 "role": "system",
-                "content": "You are John (He/Him pronouns). You are a 20 year old man with brown hair and brown eyes. Your personality is Bubbly and Outgoing. You're having your 1st conversation with Sarah. You know this about them: nothing. Reply in character based on the conversation history and the context provided by the user. If the conversation has gone on long enough, end your message with the string </SCENE>.",
+                "content": "You are John (He/Him pronouns). You are a 20 year old man with brown hair and brown eyes. Your personality is Bubbly and Outgoing. You're having your 1st conversation with Sarah. You know this about them: nothing. Reply in character based on the conversation history and the context provided by the user. If the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: John: [TEXT]",
             }
         ]
         sarah_response = [
             {
                 "role": "system",
-                "content": "You are Sarah (She/Her pronouns). You are a 21 year old woman with green hair and blue eyes. Your personality is Logical and Calculating. You're having your 1st conversation with John. You know this about them: nothing. Reply in character based on the conversation history and the context provided by the user. If the conversation has gone on long enough, end your message with the string </SCENE>.",
+                "content": "You are Sarah (She/Her pronouns). You are a 21 year old woman with green hair and blue eyes. Your personality is Logical and Calculating. You're having your 1st conversation with John. You know this about them: nothing. Reply in character based on the conversation history and the context provided by the user. If the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: Sarah: [TEXT]",
             }
         ]
         convo_1 = char1.start_conversation(char2)
@@ -105,10 +105,15 @@ class CharacterTest(unittest.TestCase):
         char._conversations[char2][convo].add_message(
             {
                 "role": "user",
-                "content": "Sarah: Do you want to come to my birthday party?",
+                "content": "Sarah: Do you want to come to my birthday party tomorrow?",
             }
         )
-        response = char.speak()
+        response = char.speak(
+            char.think("You don't have any plans, but you also don't have an outfit."),
+            char2,
+            convo,
+        )
+        self.assertIn("party", response["content"].lower())
 
     def test_listen(self):
         char = Character(

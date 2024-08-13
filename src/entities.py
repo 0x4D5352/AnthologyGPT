@@ -150,9 +150,8 @@ class Character:
         input context, characters, and conversation index.
         output a response from the model as a dict of role and content
         """
-        # thoughts = self.think(context)
-        # prompt = f"Context: {context}. Your Thoughts: {thoughts}"
-        prompt = f"Context: {context}."
+        thoughts = self.think(context)
+        prompt = f"Context: {context}. Your Thoughts: {thoughts}"
         message = self._conversations[characters][
             conversation_index
         ].generate_completion(prompt)
