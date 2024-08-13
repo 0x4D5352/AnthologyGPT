@@ -101,15 +101,9 @@ class Character:
             }
         )
         # relevant_memories = self.remember(context)
-        # current_thoughts.add_message({"role": "memories", "content": relevant_memories})
-        current_thoughts.add_message(
-            {"role": "system", "content": "memories: you are up for anything"}
-        )
+        # current_thoughts.add_message({"role": "memories", "content": f"memories: {relevant_memories}"})
         # relevant_feelings = self.feel(context)
-        # current_thoughts.add_message({"role": "feelings", "content": relevant_feelings})
-        current_thoughts.add_message(
-            {"role": "system", "content": "feelings: you feel pretty happy"}
-        )
+        # current_thoughts.add_message({"role": "feelings", "content": f"feeelings: {relevant_feelings}"})
         conclusion = current_thoughts.generate_completion(context)
         del current_thoughts
         return conclusion["content"]
@@ -150,22 +144,30 @@ class Character:
         input context, characters, and conversation index.
         output a response from the model as a dict of role and content
         """
-        thoughts = self.think(context)
-        prompt = f"Context: {context}. Your Thoughts: {thoughts}"
-        message = self._conversations[characters][
-            conversation_index
-        ].generate_completion(prompt)
+        if context:
+            thoughts = self.think(context)
+            prompt = f"Context: {context}. Your Thoughts: {thoughts}"
+            message = self._conversations[characters][
+                conversation_index
+            ].generate_completion(prompt)
+        else:
+            message = self._conversations[characters][
+                conversation_index
+            ].generate_completion()
         return message
 
     def listen(
         self,
         characters: Character | set[Character],
         conversation_index: int,
-        messages: list[dict[str, str]],
+        messages: dict[str, str] | list[dict[str, str]],
     ) -> None:
         """
         take in a list of messages (usually responses from other characters) and append then to the current conversation.
         """
+        if not isinstance(messages, list):
+            self._conversations[characters][conversation_index].add_message(messages)
+            return
         for message in messages:
             self._conversations[characters][conversation_index].add_message(message)
 

@@ -1,6 +1,30 @@
 from anthology import Anthology, Era
 from entities import Faction, Character
 
+# TODO: add a "remember conversation" or "add memory" method to the characters
+
+
+def have_conversation() -> dict[str, str]:
+    char1 = generate_characters()
+    char2 = generate_characters()
+    char1_index = char1.start_conversation(char2)
+    char2_index = char2.start_conversation(char1)
+    last_message = char1.speak(
+        char2,
+        char1_index,
+        f"You just found out {char2.name} is having their birthday tomorrow!",
+    )
+    while True:
+        if "</SCENE>" in last_message["content"]:
+            break
+        print(last_message["content"])
+        char2.listen(char1, char2_index, last_message)
+        last_message = char2.speak(char1, char2_index)
+        print(last_message["content"])
+        char1.listen(char2, char1_index, last_message)
+        last_message = char1.speak(char2, char1_index)
+    return last_message
+
 
 def generate_setting() -> set:
     res = set()
@@ -54,7 +78,7 @@ def generate_faction() -> Faction:
     return Faction(name=faction, description=description)
 
 
-def generate_characters():
+def generate_characters() -> Character:
     name = input("Character's Name:\n> ")
     age = input("Character's age:\n> ")
     gender = input("Character's gender:\n> ")
@@ -79,6 +103,8 @@ def main(interactive: bool = True) -> None:
             "Endless Desert",
         )
     print(anthology)
+    ending = have_conversation()
+    print(ending["content"])
 
 
 if __name__ == "__main__":

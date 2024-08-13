@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
 import requests
+from env import OPENAI_API_KEY
 
-OPENAI_API_KEY = load_dotenv()
+# OPENAI_API_KEY = load_dotenv()
 EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY = {
     "model": "foo-345",
     "temperature": 1,
