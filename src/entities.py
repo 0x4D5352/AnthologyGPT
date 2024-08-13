@@ -111,7 +111,6 @@ class Character:
         )
         conclusion = current_thoughts.generate_completion(context)
         del current_thoughts
-        print(f"{self.name}'s conclusions: {conclusion["content"]}\n\n")
         return conclusion["content"]
 
     def remember(self, context: str) -> str:
@@ -139,7 +138,6 @@ class Character:
             f"What memories are relevant to the context listed below? Do not quote them directly, only summarize and highlight key points. Limit your response to one paragraph or less. Context: {context}"
         )
         del indexer
-        print(f"{self.name} remembers this: {response["content"]}\n\n")
         return response["content"]
 
     def feel(self, context: str) -> str:
@@ -164,7 +162,6 @@ class Character:
             f"What feelings are relevant to the context listed below? Do not quote them directly, only summarize and highlight key points. Limit your response to one paragraph or less. Context: {context}"
         )
         del indexer
-        print(f"{self.name} feels this: {response["content"]}\n\n")
         return response["content"]
 
     def speak(
@@ -218,7 +215,6 @@ class Character:
         response = summary.generate_completion(
             "Summarize the conversation above. Limit your response to one paragraph, and only include the most essential information."
         )["content"]
-        print(f"{self.name} remembers the convo like this: {response}")
         self._memories.add_message({"role": "user", "content": response})
 
     def add_to_feelings(self, conversation: list[dict[str, str]]) -> None:
@@ -234,7 +230,6 @@ class Character:
         response = summary.generate_completion(
             "Summarize your feelings about the conversation above. Use abstract associations, connecting specific people or events with specific emotions."
         )["content"]
-        print(f"{self.name} feels this about the convo: {response}")
         self._memories.add_message({"role": "user", "content": response})
 
     def end_conversation(
