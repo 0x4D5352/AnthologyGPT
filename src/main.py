@@ -1,10 +1,9 @@
 from anthology import Anthology, Era
 from entities import Faction, Character
 
-# TODO: add a "remember conversation" or "add memory" method to the characters
-
 
 def have_conversation() -> list[dict[str, str]]:
+    prompt = input("What should these characters be talking about?")
     char1 = generate_characters()
     char2 = generate_characters()
     char1_index = char1.start_conversation(char2)
@@ -12,7 +11,7 @@ def have_conversation() -> list[dict[str, str]]:
     last_message = char1.speak(
         char2,
         char1_index,
-        f"You and {char2} have finished fighting the final boss.",
+        prompt,
     )
     convo = []
     convo.append(last_message)
