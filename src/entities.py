@@ -66,10 +66,12 @@ class Character:
         conversation_index -= 1  # for indexing/OBO avoidance
         if isinstance(characters, set):
             last_character = characters.pop()
-            list_of_characters = ", ".join([
-                f"{character.name} ({character.pronouns} pronouns)"
-                for character in characters
-            ])
+            list_of_characters = ", ".join(
+                [
+                    f"{character.name} ({character.pronouns} pronouns)"
+                    for character in characters
+                ]
+            )
             list_of_characters += f", and {last_character}"
             del last_character
         else:
@@ -77,10 +79,12 @@ class Character:
         memory_of_characters = self.remember(
             f"What do you remember about these people? {list_of_characters}"
         )
-        self._conversations[characters][conversation_index].add_message({
-            "role": "system",
-            "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
-        })
+        self._conversations[characters][conversation_index].add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
+            }
+        )
         del (
             conversation_count,
             list_of_characters,
@@ -93,20 +97,26 @@ class Character:
         taking in the context as a prompt string, create an ephemeral LLM instance to generate a conclusion about the context - including relevant memories and feelings
         """
         current_thoughts = OpenAI()
-        current_thoughts.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate.",
-        })
+        current_thoughts.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate.",
+            }
+        )
         relevant_memories = self.remember(context)
-        current_thoughts.add_message({
-            "role": "user",
-            "content": f"memories: {relevant_memories}",
-        })
+        current_thoughts.add_message(
+            {
+                "role": "user",
+                "content": f"memories: {relevant_memories}",
+            }
+        )
         relevant_feelings = self.feel(context)
-        current_thoughts.add_message({
-            "role": "user",
-            "content": f"feeelings: {relevant_feelings}",
-        })
+        current_thoughts.add_message(
+            {
+                "role": "user",
+                "content": f"feeelings: {relevant_feelings}",
+            }
+        )
         conclusion = current_thoughts.generate_completion(context)
         del current_thoughts
         return conclusion["content"]
@@ -129,10 +139,12 @@ class Character:
         3. i could have a really small long term memory size and constantly summarize and re-embed the information.
         """
         indexer = OpenAI()
-        indexer.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
-        })
+        indexer.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
+            }
+        )
         for message in self._memories._messages:
             indexer.add_message(message)
         response = indexer.generate_completion(
@@ -155,10 +167,12 @@ class Character:
         - i could do some weird mutations
         """
         indexer = OpenAI()
-        indexer.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
-        })
+        indexer.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
+            }
+        )
         for message in self._memories._messages:
             indexer.add_message(message)
         response = indexer.generate_completion(
@@ -207,10 +221,12 @@ class Character:
 
     def add_to_memories(self, conversation: list[dict[str, str]]) -> None:
         summary = OpenAI()
-        summary.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
-        })
+        summary.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+            }
+        )
         for message in conversation:
             summary.add_message(message)
         response = summary.generate_completion(
@@ -220,10 +236,12 @@ class Character:
 
     def add_to_feelings(self, conversation: list[dict[str, str]]) -> None:
         summary = OpenAI()
-        summary.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
-        })
+        summary.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+            }
+        )
         for message in conversation:
             summary.add_message(message)
         response = summary.generate_completion(
@@ -237,23 +255,3 @@ class Character:
         convo = self._conversations[characters][conversation_index]._messages
         self.add_to_memories(convo)
         self.add_to_feelings(convo)
-
-
-class Faction:
-    def __init__(
-        self,
-        name: str,
-        description: str,
-        characters: set[Character] = set(),
-    ) -> None:
-        self.name = name
-        self.description = description
-        self.characters = characters
-        self._allies = None
-        self._enemies = None
-
-    def __str__(self) -> str:
-        return f"Name: {self.name}\nDescription: {self.description}"
-
-    def __repr__(self) -> str:
-        return f"Faction(name={self.name}, description={self.description})"
