@@ -1,5 +1,5 @@
-from anthology import Anthology, Era
-from entities import Faction, Character
+from anthology import Anthology, Era, Faction
+from entities import Character
 
 
 def have_conversation() -> list[dict[str, str]]:
@@ -90,27 +90,19 @@ def generate_faction() -> Faction:
 def generate_characters() -> Character:
     name = input("Character's Name:\n> ")
     age = input("Character's age:\n> ")
-    gender = input("Character's gender:\n> ")
+    pronouns = input("Character's pronouns:\n> ")
     personality = input("Character's personality:\n> ")
     description = input("Character's description\n> ")
     return Character(
         name=name,
         age=age,
-        pronouns=gender,
+        pronouns=pronouns,
         personality=personality,
         description=description,
     )
 
 
 def main(interactive: bool = True) -> None:
-    if interactive:
-        anthology = generate_anthology()
-    else:
-        anthology = Anthology(
-            "Anthology",
-            {"Fantasy"},
-            "Endless Desert",
-        )
     ending = have_conversation()
     print("\n".join([message["content"] for message in ending]))
 

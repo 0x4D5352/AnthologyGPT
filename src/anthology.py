@@ -1,5 +1,5 @@
 from __future__ import annotations
-from random import random
+from random import random, choice
 from entities import Character
 from utils import OpenAI
 
@@ -87,6 +87,16 @@ class Faction:
         self.characters.remove(characters)
         return
 
+    def get_character(self, name: str = "") -> Character:
+        if name == "":
+            return choice(list(self.characters))
+        res = [character for character in self.characters if character.name == name]
+        if len(res) == 0:
+            raise ValueError("No characters with that name found!")
+        if len(res) > 1:
+            raise ValueError("Too many characters with the same name!")
+        return res[0]
+
     def add_allies(self, allies: Faction | list[Faction] | set[Faction]) -> None:
         if isinstance(allies, (list, set)):
             for ally in allies:
@@ -127,13 +137,11 @@ class Era:
         duration: int,
         theme: str,
         factions: set[Faction] = set(),
-        history: History = History(),
     ) -> None:
         self.name = name
         self.duration = duration
         self.theme = theme
         self.factions = factions
-        self.history = history
         self._year = 0
 
     def add_faction(self, faction: Faction) -> None:
@@ -153,6 +161,26 @@ class Era:
             self._year += 1
         return self._year
 
+    def add_event(
+        self, factions: Faction | list[Faction] | set[Faction], event: str
+    ) -> str:
+        if isinstance(factions, (list, set)):
+            for faction in factions:
+                faction._history.add_event(event)
+        else:
+            factions._history.add_event(event)
+        return event
+
+    def lose_event(
+        self, factions: Faction | list[Faction] | set[Faction], event: str
+    ) -> str:
+        if isinstance(factions, (list, set)):
+            for faction in factions:
+                faction._history.lose_event(event)
+        else:
+            factions._history.lose_event(event)
+        return event
+
 
 class Anthology:
     # TODO: add a docstring
@@ -163,11 +191,10 @@ class Anthology:
         anthology_type: str,
         year: int = 0,
         era: Era | None = None,
-        history: History = History(),
     ) -> None:
         self.name = name
         self.setting = setting
         self.anthology_type = anthology_type
         self._year = year
         self._era = era
-        self._history = history
+        self._summary = ""
