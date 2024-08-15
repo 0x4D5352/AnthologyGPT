@@ -3,6 +3,8 @@ from random import random
 from entities import Character
 from utils import OpenAI
 
+LEGEND_CHANCE: float = 0.5
+
 
 class History:
     """
@@ -23,7 +25,7 @@ class History:
     def lose_event(self, event: str) -> None:
         self._remembered_history.remove(event)
         self._lost_history.add(event)
-        if random() >= 0.5:
+        if random() >= LEGEND_CHANCE:
             self.create_legend(event)
 
     def create_legend(self, event: str) -> None:
@@ -144,7 +146,7 @@ class Era:
             return
         self.factions.remove(faction)
 
-    def advance_time(self) -> int:
+    def _advance_time(self) -> int:
         if self._year >= self.duration:
             self._year = self.duration
         else:
