@@ -10,19 +10,19 @@ class History:
     """
 
     def __init__(self) -> None:
-        self.actual_history: set[str] = set()
-        self.lost_history: set[str] = set()
-        self.remembered_history: set[str] = set()
-        self.legends: set[str] = set()
-        self.summary: str = ""
+        self._actual_history: set[str] = set()
+        self._lost_history: set[str] = set()
+        self._remembered_history: set[str] = set()
+        self._legends: set[str] = set()
+        self._summary: str = ""
 
     def add_event(self, event: str) -> None:
-        self.actual_history.add(event)
-        self.remembered_history.add(event)
+        self._actual_history.add(event)
+        self._remembered_history.add(event)
 
     def lose_event(self, event: str) -> None:
-        self.remembered_history.remove(event)
-        self.lost_history.add(event)
+        self._remembered_history.remove(event)
+        self._lost_history.add(event)
         if random() >= 0.5:
             self.create_legend(event)
 
@@ -31,7 +31,18 @@ class History:
         legend = llm.generate_completion(
             f"Turn the following event into a legend. Mutate aspects of the story to move it from a real event to some sort of myth or legend. {event}"
         )["content"]
-        self.legends.add(legend)
+        del llm
+        self._legends.add(legend)
+
+    def generate_sumary(self) -> str:
+        llm = OpenAI()
+        history = "\n".join(self._remembered_history)
+        legends = "\n".join(self._legends)
+        summary = llm.generate_completion(
+            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}\n{legends}"
+        )["content"]
+        del llm, history, legends
+        return summary
 
 
 class Faction:
