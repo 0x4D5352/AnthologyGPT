@@ -71,7 +71,7 @@ class LLM:
     def __repr__(self) -> str:
         return f"LLM(source='{self.source}', endpoint='{self.endpoint}', headers={self.headers})"
 
-    def generate_completion(self, prompt: str):
+    def generate_completion(self, prompt: str = ""):
         raise NotImplementedError
 
     def generate_embeddings(self, input: str):

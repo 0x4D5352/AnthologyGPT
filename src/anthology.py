@@ -1,149 +1,7 @@
 from __future__ import annotations
-from random import random, choice
-from entities import Character
+from random import choice
+from entities import Faction, Character
 from utils import generate_single_response, generate_summary
-
-LEGEND_CHANCE: float = 0.5
-
-
-class History:
-    """
-    A struct for sets of events, with a summary of the remembered history and legends.
-    """
-
-    def __init__(self) -> None:
-        self._actual_history: set[str] = set()
-        self._lost_history: set[str] = set()
-        self._remembered_history: set[str] = set()
-        self._legends: set[str] = set()
-        self._summary: str = ""
-
-    def add_event(self, event: str) -> None:
-        self._actual_history.add(event)
-        self._remembered_history.add(event)
-
-    def lose_event(self, event: str) -> None:
-        self._remembered_history.remove(event)
-        self._lost_history.add(event)
-        if random() >= LEGEND_CHANCE:
-            self.create_legend(event)
-
-    def create_legend(self, event: str) -> None:
-        legend = generate_single_response(
-            f"Turn the following event into a legend. Mutate aspects of the story to transform it from a real event into some sort of myth or legend. {event}"
-        )
-        self._legends.add(legend)
-
-    def generate_summary(self) -> str:
-        history = "\n".join(self._remembered_history)
-        legends = ""
-        if len(self._legends) > 0:
-            legends = "\n".join(self._legends)
-            history += "\n"
-        context = history + legends
-        summary = generate_summary(context)
-        # del history, legends, context
-        return summary
-
-
-class Faction:
-    def __init__(
-        self,
-        name: str,
-        description: str,
-        characters: dict[str, Character] = {},
-    ) -> None:
-        self.name = name
-        self.description = description
-        self.characters = characters
-        self._allies: set[Faction] = set()
-        self._enemies: set[Faction] = set()
-        self._history = History()
-
-    def __str__(self) -> str:
-        return f"Name: {self.name}\nDescription: {self.description}"
-
-    def __repr__(self) -> str:
-        return f"Faction(name={self.name}, description={self.description})"
-
-    def add_characters(
-        self, characters: Character | list[Character] | set[Character]
-    ) -> None:
-        if isinstance(characters, (list, set)):
-            for character in characters:
-                self.characters[character.name] = character
-            return
-        self.characters[characters.name] = characters
-        return
-
-    def remove_characters(
-        self, characters: Character | list[Character] | set[Character]
-    ) -> None:
-        if isinstance(characters, (list, set)):
-            for character in characters:
-                del self.characters[character.name]
-            return
-        del self.characters[characters.name]
-        return
-
-    def get_character(self, name: str = "") -> Character:
-        if name == "":
-            return choice(list(self.characters.values()))
-        res = self.characters[name]
-        if not res:
-            raise ValueError("character does not exist!")
-        return res
-
-    def add_allies(self, allies: Faction | list[Faction] | set[Faction]) -> None:
-        if isinstance(allies, (list, set)):
-            for ally in allies:
-                self._allies.add(ally)
-            return
-        self._allies.add(allies)
-        return
-
-    def remove_allies(self, allies: Faction | list[Faction] | set[Faction]) -> None:
-        if isinstance(allies, (list, set)):
-            for ally in allies:
-                self._allies.remove(ally)
-            return
-        self._allies.remove(allies)
-        return
-
-    def add_enemies(self, enemies: Faction | list[Faction] | set[Faction]) -> None:
-        if isinstance(enemies, (list, set)):
-            for enemy in enemies:
-                self._enemies.add(enemy)
-            return
-        self._enemies.add(enemies)
-        return
-
-    def remove_enemies(self, enemies: Faction | list[Faction] | set[Faction]) -> None:
-        if isinstance(enemies, (list, set)):
-            for enemy in enemies:
-                self._enemies.remove(enemy)
-            return
-        self._enemies.remove(enemies)
-        return
-
-    def generate_summary(self) -> str:
-        context = (
-            f"Faction Name: {self.name}. Description: {self.description}\nCharacters:"
-        )
-        characters = "\n".join(
-            [character.get_description() for character in self.characters.values()]
-        )
-        context += "\n" + characters
-        # del characters
-        if len(self._allies) > 0:
-            allies = "\n".join([ally.name for ally in self._allies])
-            context += "\n" + allies
-            # del allies
-        if len(self._enemies) > 0:
-            enemies = "\n".join([enemy.name for enemy in self._enemies])
-            context += "\n" + enemies
-            # del enemies
-        return generate_summary(context)
 
 
 class Era:
@@ -283,9 +141,9 @@ Format your answer as an unordered markdown list like so:
         return conversation
 
     def generate_summary(self) -> str:
-        history = "\n".join(
-            [faction._history.generate_summary() for faction in self.factions]
-        )
+        history = "\n".join([
+            faction._history.generate_summary() for faction in self.factions
+        ])
         summary = generate_summary(history)
         # del history
         return summary
@@ -316,6 +174,13 @@ class Anthology:
 
     def create_era(self, name: str, duration: int, theme: str) -> None:
         self._eras[name] = Era(name, duration, theme)
+
+    def add_eras(self, eras: Era | list[Era]) -> None:
+        if isinstance(eras, Era):
+            self._eras[eras.name] = eras
+            return
+        for era in eras:
+            self.add_eras(era)
 
     def advance_era(self) -> None:
         return None

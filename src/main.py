@@ -1,41 +1,8 @@
-from anthology import Anthology, Era, Faction
-from entities import Character
+from anthology import Anthology, Era
+from entities import Faction, Character
 
 
-def have_conversation() -> list[dict[str, str]]:
-    prompt = input("What should these characters be talking about?")
-    char1 = generate_characters()
-    char2 = generate_characters()
-    char1_index = char1.start_conversation(char2)
-    char2_index = char2.start_conversation(char1)
-    last_message = char1.speak(
-        char2,
-        char1_index,
-        prompt,
-    )
-    convo = []
-    convo.append(last_message)
-    while True:
-        print(last_message["content"])
-        if "</SCENE>" in last_message["content"]:
-            break
-        char2.listen(char1, char2_index, last_message)
-        last_message = char2.speak(char1, char2_index)
-        convo.append(last_message)
-        print(last_message["content"])
-        char1.listen(char2, char1_index, last_message)
-        last_message = char1.speak(char2, char1_index)
-        convo.append(last_message)
-    char1.end_conversation(char2, char1_index)
-    char2.end_conversation(char1, char2_index)
-    print(f"{char1.name} memories:{char1._memories._messages}")
-    print(f"{char1.name} feelings:{char1._feelings._messages}")
-    print(f"{char2.name} memories:{char2._memories._messages}")
-    print(f"{char2.name} feelings:{char2._feelings._messages}")
-    return convo
-
-
-def generate_setting() -> set:
+def generate_setting() -> str:
     res = set()
     while True:
         print(
@@ -50,7 +17,7 @@ def generate_setting() -> set:
         print(f"current setting: {", ".join(res)}")
     if len(res) == 0:
         raise ValueError("You need at least one setting!")
-    return res
+    return ", ".join(res)
 
 
 def generate_anthology() -> Anthology:
@@ -61,7 +28,7 @@ def generate_anthology() -> Anthology:
     print(
         "First, let's set the stage for your Anthology. What kind of setting are you working with?"
     )
-    setting: set = generate_setting()
+    setting: str = generate_setting()
     print(
         "Now, let's design your Anthology's \"world\". What type of Anthology will your characters inhabit?"
     )
@@ -102,10 +69,33 @@ def generate_characters() -> Character:
     )
 
 
-def main(interactive: bool = True) -> None:
-    ending = have_conversation()
-    print("\n".join([message["content"] for message in ending]))
+def main() -> None:
+    anthology = generate_anthology()
+    print("Anthologies are comprised of Eras; a period of time with a common theme.")
+    era = generate_era()
+    print("Within each era is a number of factions. You need at least one.")
+    add_more = True
+    while add_more:
+        era.add_faction(generate_faction())
+        add_more = (
+            False
+            if input("add another faction? Y/N (default: N)\n> :") in ["", "N", "n"]
+            else True
+        )
+    print("Within each faction is a number of characters. You need at least two.")
+    for faction in era.factions:
+        faction.add_characters(generate_characters())
+        add_more = True
+        while add_more:
+            faction.add_characters(generate_characters())
+            add_more = (
+                False
+                if input("add another character? Y/N (default: N)\n> :")
+                in ["", "N", "n"]
+                else True
+            )
+    anthology._eras[era.name] = era
 
 
 if __name__ == "__main__":
-    main(False)
+    main()
