@@ -158,8 +158,9 @@ class Era:
         self.duration = duration
         self.theme = theme
         self.factions = factions
-        self._year = 0
-        self._summary = ""
+        self._year: int = 0
+        self._summary: str = ""
+        self._events: list = []
 
     def add_faction(self, faction: Faction) -> None:
         if faction in self.factions:
@@ -177,13 +178,21 @@ class Era:
         self._year += 1
         return self._year
 
-    def generate_events(self) -> None:
+    def generate_possible_events(self) -> None:
         context = "\n".join([faction.generate_summary() for faction in self.factions])
         prompt = f"""
-Come up with a series of events that could happen in the {self.name} era. The theme of this era is {self.theme}. Here are the following factions, their relationships, and their characters:
+Come up with a series of 5 to 10 events that could happen in the {self.name} era. The theme of this era is {self.theme}. Here are the following factions, their relationships, and their characters:
 {context}
+Format your answer as an unordered markdown list like so:
+- event a
+- event b
+- event c
 """
         result = generate_single_response(prompt)
+        events = result.split("- ")[1:]
+        for event in events:
+            event.strip()
+            self._events.append(event)
 
     def add_event(
         self, factions: Faction | list[Faction] | set[Faction], event: str
@@ -229,7 +238,7 @@ Come up with a series of events that could happen in the {self.name} era. The th
         conversation = []
         participants = {}
         if len(characters) == 1:
-            # a monologue! yay
+            # a monologue!
             active_character = characters.copy().pop()
             participants[active_character] = {
                 "others": {active_character},
