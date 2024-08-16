@@ -42,7 +42,7 @@ class Character:
     def __repr__(self) -> str:
         return f"Character(name='{self.name}', age='{self.age}', gender='{self.pronouns}', personality='{self.personality}', description='{self.description}')"
 
-    def start_conversation(self, characters: Character | set[Character]) -> int:
+    def start_conversation(self, characters: set[Character]) -> int:
         """
         Create a new conversation between your character and one or more other characters. To track the conversation, the index is returned for future use.
         """
@@ -64,16 +64,13 @@ class Character:
                 conversation_count = f"{conversation_index + 1}th"
 
         conversation_index -= 1  # for indexing/OBO avoidance
-        if isinstance(characters, set):
-            last_character = characters.pop()
-            list_of_characters = ", ".join([
-                f"{character.name} ({character.pronouns} pronouns)"
-                for character in characters
-            ])
-            list_of_characters += f", and {last_character}"
-            del last_character
-        else:
-            list_of_characters = characters.name
+        last_character = characters.pop()
+        list_of_characters = ", ".join([
+            f"{character.name} ({character.pronouns} pronouns)"
+            for character in characters
+        ])
+        list_of_characters += f", and {last_character}"
+        del last_character
         memory_of_characters = self.remember(
             f"What do you remember about these people? {list_of_characters}"
         )
@@ -169,7 +166,7 @@ class Character:
 
     def speak(
         self,
-        characters: Character | set[Character],
+        characters: set[Character],
         conversation_index: int,
         context: str = "",
     ) -> dict[str, str]:
@@ -192,7 +189,7 @@ class Character:
 
     def listen(
         self,
-        characters: Character | set[Character],
+        characters: set[Character],
         conversation_index: int,
         messages: dict[str, str] | list[dict[str, str]],
     ) -> None:
@@ -233,7 +230,7 @@ class Character:
         self._memories.add_message({"role": "user", "content": response})
 
     def end_conversation(
-        self, characters: Character | set[Character], conversation_index: int
+        self, characters: set[Character], conversation_index: int
     ) -> None:
         convo = self._conversations[characters][conversation_index]._messages
         self.add_to_memories(convo)
