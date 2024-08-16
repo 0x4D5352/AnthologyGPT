@@ -36,7 +36,7 @@ class History:
         del llm
         self._legends.add(legend)
 
-    def generate_sumary(self) -> str:
+    def generate_summary(self) -> str:
         llm = OpenAI()
         history = "\n".join(self._remembered_history)
         legends = "\n".join(self._legends)
@@ -52,7 +52,7 @@ class Faction:
         self,
         name: str,
         description: str,
-        characters: set[Character] = set(),
+        characters: dict[str, Character] = {},
     ) -> None:
         self.name = name
         self.description = description
@@ -72,9 +72,9 @@ class Faction:
     ) -> None:
         if isinstance(characters, (list, set)):
             for character in characters:
-                self.characters.add(character)
+                self.characters[character.name] = character
             return
-        self.characters.add(characters)
+        self.characters[characters.name] = characters
         return
 
     def remove_characters(
@@ -82,20 +82,18 @@ class Faction:
     ) -> None:
         if isinstance(characters, (list, set)):
             for character in characters:
-                self.characters.remove(character)
+                del self.characters[character.name]
             return
-        self.characters.remove(characters)
+        del self.characters[characters.name]
         return
 
     def get_character(self, name: str = "") -> Character:
         if name == "":
-            return choice(list(self.characters))
-        res = [character for character in self.characters if character.name == name]
-        if len(res) == 0:
-            raise ValueError("No characters with that name found!")
-        if len(res) > 1:
-            raise ValueError("Too many characters with the same name!")
-        return res[0]
+            return choice(list(self.characters.values()))
+        res = self.characters[name]
+        if not res:
+            raise ValueError("character does not exist!")
+        return res
 
     def add_allies(self, allies: Faction | list[Faction] | set[Faction]) -> None:
         if isinstance(allies, (list, set)):
@@ -143,6 +141,7 @@ class Era:
         self.theme = theme
         self.factions = factions
         self._year = 0
+        self._summary = ""
 
     def add_faction(self, faction: Faction) -> None:
         if faction in self.factions:
@@ -171,6 +170,56 @@ class Era:
             factions._history.add_event(event)
         return event
 
+    def have_conversation(
+        self, characters: set[Character], context: str
+    ) -> list[dict[str, str]]:
+        conversation = []
+        participants = {}
+        if len(characters) == 1:
+            # a monologue! yay
+            active_character = characters.copy().pop()
+            participants[active_character] = {
+                "others": {active_character},
+                "index": active_character.start_conversation({active_character}),
+            }
+            context = (
+                f"You are thinking aloud to yourself about the following:\n{context}"
+            )
+        else:
+            for character in characters:
+                others = characters - {character}
+                participants[character] = {
+                    "others": others,
+                    "index": character.start_conversation(others),
+                }
+            active_character = choice(list(characters))
+        last_message = active_character.speak(
+            participants[active_character]["others"],
+            participants[active_character]["index"],
+            context,
+        )
+        while "</SCENE>" not in last_message["content"]:
+            conversation.append(last_message)
+            last_message = active_character.speak(
+                participants[active_character]["others"],
+                participants[active_character]["index"],
+            )
+            for character in participants[active_character]["others"]:
+                character.listen(
+                    participants[character]["others"],
+                    participants[character]["index"],
+                    last_message,
+                )
+            active_character = choice(list(characters))
+        if last_message != conversation[-1]:
+            conversation.append(last_message)
+        for character in characters:
+            character.end_conversation(
+                participants[character]["others"],
+                participants[character]["index"],
+            )
+        return conversation
+
     def lose_event(
         self, factions: Faction | list[Faction] | set[Faction], event: str
     ) -> str:
@@ -181,6 +230,17 @@ class Era:
             factions._history.lose_event(event)
         return event
 
+    def generate_summary(self) -> str:
+        llm = OpenAI()
+        history = "\n".join([
+            faction._history.generate_summary() for faction in self.factions
+        ])
+        summary = llm.generate_completion(
+            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}"
+        )["content"]
+        del llm, history
+        return summary
+
 
 class Anthology:
     # TODO: add a docstring
@@ -190,11 +250,24 @@ class Anthology:
         setting: set,
         anthology_type: str,
         year: int = 0,
-        era: Era | None = None,
+        eras: Era | set[Era] = set(),
     ) -> None:
         self.name = name
         self.setting = setting
         self.anthology_type = anthology_type
         self._year = year
-        self._era = era
+        if isinstance(eras, Era):
+            self._eras = {eras}
+        else:
+            self._eras = eras
         self._summary = ""
+
+    def generate_summary(self) -> str:
+        # TODO: make this a helper method in utils, you're copying this too much.
+        llm = OpenAI()
+        history = "\n".join([era._summary for era in self._eras])
+        summary = llm.generate_completion(
+            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}"
+        )["content"]
+        del llm, history
+        return summary
