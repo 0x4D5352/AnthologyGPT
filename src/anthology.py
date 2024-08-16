@@ -31,7 +31,7 @@ class History:
     def create_legend(self, event: str) -> None:
         llm = OpenAI()
         legend = llm.generate_completion(
-            f"Turn the following event into a legend. Mutate aspects of the story to move it from a real event to some sort of myth or legend. {event}"
+            f"Turn the following event into a legend. Mutate aspects of the story to transform it from a real event into some sort of myth or legend. {event}"
         )["content"]
         del llm
         self._legends.add(legend)
@@ -170,6 +170,76 @@ class Era:
             factions._history.add_event(event)
         return event
 
+    def lose_event(
+        self, factions: Faction | list[Faction] | set[Faction], event: str
+    ) -> str:
+        if isinstance(factions, (list, set)):
+            for faction in factions:
+                faction._history.lose_event(event)
+        else:
+            factions._history.lose_event(event)
+        return event
+
+    def get_characters(self, names: set[str] = set()) -> set[Character]:
+        """
+        Take a set of names and pull the characters from your factions. if no names are given, choose some random characters.
+        """
+        res: set[Character] = set()
+        if len(names) == 0:
+            character_count = choice(range(1, 5))
+            while len(res) < character_count:
+                faction = choice(list(self.factions))
+                res.add(faction.get_character())
+            return res
+        for faction in self.factions:
+            for name in names:
+                if name not in faction.characters:
+                    continue
+                res.add(faction.characters[name])
+        return res
+
+    def generate_summary(self) -> str:
+        llm = OpenAI()
+        history = "\n".join(
+            [faction._history.generate_summary() for faction in self.factions]
+        )
+        summary = llm.generate_completion(
+            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}"
+        )["content"]
+        del llm, history
+        return summary
+
+
+class Anthology:
+    # TODO: add a docstring
+    def __init__(
+        self,
+        name: str,
+        setting: set,
+        anthology_type: str,
+        year: int = 0,
+        eras: Era | set[Era] = set(),
+    ) -> None:
+        self.name = name
+        self.setting = setting
+        self.anthology_type = anthology_type
+        self._year = year
+        if isinstance(eras, Era):
+            self._eras = {eras}
+        else:
+            self._eras = eras
+        self._summary = ""
+
+    def generate_summary(self) -> str:
+        # TODO: make this a helper method in utils, you're copying this too much.
+        llm = OpenAI()
+        history = "\n".join([era._summary for era in self._eras])
+        summary = llm.generate_completion(
+            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}"
+        )["content"]
+        del llm, history
+        return summary
+
     def have_conversation(
         self, characters: set[Character], context: str
     ) -> list[dict[str, str]]:
@@ -219,55 +289,3 @@ class Era:
                 participants[character]["index"],
             )
         return conversation
-
-    def lose_event(
-        self, factions: Faction | list[Faction] | set[Faction], event: str
-    ) -> str:
-        if isinstance(factions, (list, set)):
-            for faction in factions:
-                faction._history.lose_event(event)
-        else:
-            factions._history.lose_event(event)
-        return event
-
-    def generate_summary(self) -> str:
-        llm = OpenAI()
-        history = "\n".join([
-            faction._history.generate_summary() for faction in self.factions
-        ])
-        summary = llm.generate_completion(
-            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}"
-        )["content"]
-        del llm, history
-        return summary
-
-
-class Anthology:
-    # TODO: add a docstring
-    def __init__(
-        self,
-        name: str,
-        setting: set,
-        anthology_type: str,
-        year: int = 0,
-        eras: Era | set[Era] = set(),
-    ) -> None:
-        self.name = name
-        self.setting = setting
-        self.anthology_type = anthology_type
-        self._year = year
-        if isinstance(eras, Era):
-            self._eras = {eras}
-        else:
-            self._eras = eras
-        self._summary = ""
-
-    def generate_summary(self) -> str:
-        # TODO: make this a helper method in utils, you're copying this too much.
-        llm = OpenAI()
-        history = "\n".join([era._summary for era in self._eras])
-        summary = llm.generate_completion(
-            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}"
-        )["content"]
-        del llm, history
-        return summary
