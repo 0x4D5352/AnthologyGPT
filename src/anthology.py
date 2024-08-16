@@ -1,7 +1,7 @@
 from __future__ import annotations
 from random import random, choice
 from entities import Character
-from utils import OpenAI
+from utils import generate_single_response, generate_summary
 
 LEGEND_CHANCE: float = 0.5
 
@@ -29,21 +29,20 @@ class History:
             self.create_legend(event)
 
     def create_legend(self, event: str) -> None:
-        llm = OpenAI()
-        legend = llm.generate_completion(
+        legend = generate_single_response(
             f"Turn the following event into a legend. Mutate aspects of the story to transform it from a real event into some sort of myth or legend. {event}"
-        )["content"]
-        del llm
+        )
         self._legends.add(legend)
 
     def generate_summary(self) -> str:
-        llm = OpenAI()
         history = "\n".join(self._remembered_history)
-        legends = "\n".join(self._legends)
-        summary = llm.generate_completion(
-            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}\n{legends}"
-        )["content"]
-        del llm, history, legends
+        legends = ""
+        if len(self._legends) > 0:
+            legends = "\n".join(self._legends)
+            history += "\n"
+        context = history + legends
+        summary = generate_summary(context)
+        # del history, legends, context
         return summary
 
 
@@ -127,6 +126,25 @@ class Faction:
         self._enemies.remove(enemies)
         return
 
+    def generate_summary(self) -> str:
+        context = (
+            f"Faction Name: {self.name}. Description: {self.description}\nCharacters:"
+        )
+        characters = "\n".join(
+            [character.get_description() for character in self.characters.values()]
+        )
+        context += "\n" + characters
+        # del characters
+        if len(self._allies) > 0:
+            allies = "\n".join([ally.name for ally in self._allies])
+            context += "\n" + allies
+            # del allies
+        if len(self._enemies) > 0:
+            enemies = "\n".join([enemy.name for enemy in self._enemies])
+            context += "\n" + enemies
+            # del enemies
+        return generate_summary(context)
+
 
 class Era:
     def __init__(
@@ -155,10 +173,17 @@ class Era:
 
     def _advance_time(self) -> int:
         if self._year >= self.duration:
-            self._year = self.duration
-        else:
-            self._year += 1
+            return -1
+        self._year += 1
         return self._year
+
+    def generate_events(self) -> None:
+        context = "\n".join([faction.generate_summary() for faction in self.factions])
+        prompt = f"""
+Come up with a series of events that could happen in the {self.name} era. The theme of this era is {self.theme}. Here are the following factions, their relationships, and their characters:
+{context}
+"""
+        result = generate_single_response(prompt)
 
     def add_event(
         self, factions: Faction | list[Faction] | set[Faction], event: str
@@ -197,48 +222,6 @@ class Era:
                     continue
                 res.add(faction.characters[name])
         return res
-
-    def generate_summary(self) -> str:
-        llm = OpenAI()
-        history = "\n".join(
-            [faction._history.generate_summary() for faction in self.factions]
-        )
-        summary = llm.generate_completion(
-            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}"
-        )["content"]
-        del llm, history
-        return summary
-
-
-class Anthology:
-    # TODO: add a docstring
-    def __init__(
-        self,
-        name: str,
-        setting: set,
-        anthology_type: str,
-        year: int = 0,
-        eras: Era | set[Era] = set(),
-    ) -> None:
-        self.name = name
-        self.setting = setting
-        self.anthology_type = anthology_type
-        self._year = year
-        if isinstance(eras, Era):
-            self._eras = {eras}
-        else:
-            self._eras = eras
-        self._summary = ""
-
-    def generate_summary(self) -> str:
-        # TODO: make this a helper method in utils, you're copying this too much.
-        llm = OpenAI()
-        history = "\n".join([era._summary for era in self._eras])
-        summary = llm.generate_completion(
-            f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{history}"
-        )["content"]
-        del llm, history
-        return summary
 
     def have_conversation(
         self, characters: set[Character], context: str
@@ -289,3 +272,41 @@ class Anthology:
                 participants[character]["index"],
             )
         return conversation
+
+    def generate_summary(self) -> str:
+        history = "\n".join(
+            [faction._history.generate_summary() for faction in self.factions]
+        )
+        summary = generate_summary(history)
+        # del history
+        return summary
+
+
+class Anthology:
+    # TODO: add a docstring
+    def __init__(
+        self,
+        name: str,
+        setting: str,
+        anthology_type: str,
+        year: int = 0,
+        eras: dict[str, Era] = {},
+    ) -> None:
+        self.name = name
+        self.setting = setting
+        self.anthology_type = anthology_type
+        self._year = year
+        self._eras = eras
+        self._summary = ""
+
+    def generate_summary(self) -> str:
+        history = "\n".join([era._summary for era in self._eras.values()])
+        summary = generate_summary(history)
+        # del history
+        return summary
+
+    def create_era(self, name: str, duration: int, theme: str) -> None:
+        self._eras[name] = Era(name, duration, theme)
+
+    def advance_era(self) -> None:
+        return None
