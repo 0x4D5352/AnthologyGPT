@@ -1,5 +1,9 @@
 from __future__ import annotations
-from utils import OpenAI
+from utils import LLM, LLMFactory
+
+# TODO: update logic to pull a generic LLM instead of openAI specifically
+
+LLMFactory.get_llm()
 
 
 class Character:
@@ -33,10 +37,10 @@ class Character:
         self.pronouns: str = pronouns
         self.personality: str = personality
         self.description: str = description
-        self._conversations: dict[Character | set[Character], list[OpenAI]] = {}
+        self._conversations: dict[Character | set[Character], list[LLM]] = {}
         # TODO: get these set up for embeddings. see remember/feel for more docs
-        self._memories: OpenAI = OpenAI()
-        self._feelings: OpenAI = OpenAI()
+        self._memories: LLM = LLMFactory.get_llm()
+        self._feelings: LLM = LLMFactory.get_llm()
         self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is: {self.personality}."
 
     def __repr__(self) -> str:
@@ -47,9 +51,9 @@ class Character:
         Create a new conversation between your character and one or more other characters. To track the conversation, the index is returned for future use.
         """
         if characters not in self._conversations:
-            self._conversations[characters] = [OpenAI()]
+            self._conversations[characters] = [LLMFactory.get_llm()]
         else:
-            self._conversations[characters].append(OpenAI())
+            self._conversations[characters].append(LLMFactory.get_llm())
         conversation_index = len(self._conversations[characters])
         match conversation_index:
             case 0:
@@ -65,19 +69,23 @@ class Character:
 
         conversation_index -= 1  # for indexing/OBO avoidance
         last_character = characters.pop()
-        list_of_characters = ", ".join([
-            f"{character.name} ({character.pronouns} pronouns)"
-            for character in characters
-        ])
+        list_of_characters = ", ".join(
+            [
+                f"{character.name} ({character.pronouns} pronouns)"
+                for character in characters
+            ]
+        )
         list_of_characters += f", and {last_character}"
         del last_character
         memory_of_characters = self.remember(
             f"What do you remember about these people? {list_of_characters}"
         )
-        self._conversations[characters][conversation_index].add_message({
-            "role": "system",
-            "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
-        })
+        self._conversations[characters][conversation_index].add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
+            }
+        )
         del (
             conversation_count,
             list_of_characters,
@@ -89,21 +97,27 @@ class Character:
         """
         taking in the context as a prompt string, create an ephemeral LLM instance to generate a conclusion about the context - including relevant memories and feelings
         """
-        current_thoughts = OpenAI()
-        current_thoughts.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate. Respond with a single sentence.",
-        })
+        current_thoughts = LLMFactory.get_llm()
+        current_thoughts.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate. Respond with a single sentence.",
+            }
+        )
         relevant_memories = self.remember(context)
-        current_thoughts.add_message({
-            "role": "user",
-            "content": f"memories: {relevant_memories}",
-        })
+        current_thoughts.add_message(
+            {
+                "role": "user",
+                "content": f"memories: {relevant_memories}",
+            }
+        )
         relevant_feelings = self.feel(context)
-        current_thoughts.add_message({
-            "role": "user",
-            "content": f"feeelings: {relevant_feelings}",
-        })
+        current_thoughts.add_message(
+            {
+                "role": "user",
+                "content": f"feeelings: {relevant_feelings}",
+            }
+        )
         conclusion = current_thoughts.generate_completion(context)
         del current_thoughts
         return conclusion["content"]
@@ -125,11 +139,13 @@ class Character:
         2. execute another LLM call that takes the input, rewords it, and re-embeds it.
         3. i could have a really small long term memory size and constantly summarize and re-embed the information.
         """
-        indexer = OpenAI()
-        indexer.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
-        })
+        indexer = LLMFactory.get_llm()
+        indexer.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
+            }
+        )
         for message in self._memories._messages:
             indexer.add_message(message)
         response = indexer.generate_completion(
@@ -151,11 +167,13 @@ class Character:
         - maybe there's some sum-and-averaging of the embedding
         - i could do some weird mutations
         """
-        indexer = OpenAI()
-        indexer.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
-        })
+        indexer = LLMFactory.get_llm()
+        indexer.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
+            }
+        )
         for message in self._memories._messages:
             indexer.add_message(message)
         response = indexer.generate_completion(
@@ -204,11 +222,13 @@ class Character:
             self._conversations[characters][conversation_index].add_message(message)
 
     def add_to_memories(self, conversation: list[dict[str, str]]) -> None:
-        summary = OpenAI()
-        summary.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
-        })
+        summary = LLMFactory.get_llm()
+        summary.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+            }
+        )
         for message in conversation:
             summary.add_message(message)
         response = summary.generate_completion(
@@ -217,11 +237,13 @@ class Character:
         self._memories.add_message({"role": "user", "content": response})
 
     def add_to_feelings(self, conversation: list[dict[str, str]]) -> None:
-        summary = OpenAI()
-        summary.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
-        })
+        summary = LLMFactory.get_llm()
+        summary.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+            }
+        )
         for message in conversation:
             summary.add_message(message)
         response = summary.generate_completion(
@@ -235,3 +257,6 @@ class Character:
         convo = self._conversations[characters][conversation_index]._messages
         self.add_to_memories(convo)
         self.add_to_feelings(convo)
+
+    def get_description(self) -> str:
+        return self.__descriptor
