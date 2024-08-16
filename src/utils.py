@@ -169,6 +169,28 @@ class Ollama(LLM):
         raise NotImplementedError
 
 
+class LLMFactory:
+    @staticmethod
+    def get_llm(model: str = "openai") -> LLM:
+        if model == "openai":
+            return OpenAI()
+        # if model == "ollama":
+        #     return Ollama()
+        raise ValueError("unkown model")
+
+
+def generate_single_response(context: str) -> str:
+    llm = OpenAI()
+    response = llm.generate_completion(context)["content"]
+    del llm
+    return response
+
+
+def generate_summary(context: str) -> str:
+    prompt = f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{context}"
+    return generate_summary(prompt)
+
+
 def main():
     client = OpenAI()
     _ = client.generate_completion("Let me know if this is working!")
