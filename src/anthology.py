@@ -20,7 +20,7 @@ class Era:
     Methods:
     add_faction()
     remove_faction()
-    _advance_time()
+    advance_time()
     generate_possible_events()
     add_event()
     lose_event()
@@ -45,22 +45,38 @@ class Era:
         self._events: list = []
 
     def add_faction(self, faction: Faction) -> None:
+        """
+        A simple wrapper around adding factions to the Era
+        """
         if faction in self.factions:
             return
         self.factions.add(faction)
 
     def remove_faction(self, faction: Faction) -> None:
+        """
+        A simple wrapper around removing factions from the Era
+        """
         if faction not in self.factions:
             return
         self.factions.remove(faction)
 
-    def _advance_time(self) -> int:
+    def advance_time(self, inc: int = 1) -> int:
+        """
+        Increment the current year of the Era by some amount and return the number of years advanced. Defaults to 1 year.
+        """
+        self._year += inc
         if self._year >= self.duration:
-            return -1
-        self._year += 1
-        return self._year
+            difference = self._year - self.duration
+            if difference == 0:
+                return difference
+            self._year = self.duration
+            return inc - difference
+        return inc
 
     def generate_possible_events(self) -> None:
+        """
+        Use an LLM to generate events that could happen during the current Era that fits with the given theme.
+        """
         context = "\n".join([faction.generate_summary() for faction in self.factions])
         prompt = f"""
 Come up with a series of 5 to 10 events that could happen in the {self.name} era. The theme of this era is {self.theme}. Here are the following factions, their relationships, and their characters:
@@ -79,6 +95,9 @@ Format your answer as an unordered markdown list like so:
     def add_event(
         self, factions: Faction | list[Faction] | set[Faction], event: str
     ) -> str:
+        """
+        Add a given event to the history of all factions involved. Return the event in case it needs to be shared elsewhere.
+        """
         if isinstance(factions, (list, set)):
             for faction in factions:
                 faction._history.add_event(event)
