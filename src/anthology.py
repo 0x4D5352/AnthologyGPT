@@ -5,6 +5,30 @@ from utils import generate_single_response, generate_summary
 
 
 class Era:
+    """
+    A class representing a period of time within an Anthology.
+
+    Attributes:
+    Name
+    duration
+    theme
+    factions
+    _year
+    _summary
+    _events
+
+    Methods:
+    add_faction()
+    remove_faction()
+    _advance_time()
+    generate_possible_events()
+    add_event()
+    lose_event()
+    get_characters()
+    have_conversation()
+    generate_summary()
+    """
+
     def __init__(
         self,
         name: str,
@@ -141,9 +165,9 @@ Format your answer as an unordered markdown list like so:
         return conversation
 
     def generate_summary(self) -> str:
-        history = "\n".join([
-            faction._history.generate_summary() for faction in self.factions
-        ])
+        history = "\n".join(
+            [faction._history.generate_summary() for faction in self.factions]
+        )
         summary = generate_summary(history)
         # del history
         return summary

@@ -94,7 +94,7 @@ def main() -> None:
                 in ["", "N", "n"]
                 else True
             )
-    anthology._eras[era.name] = era
+    anthology.add_eras(era)
 
 
 if __name__ == "__main__":
