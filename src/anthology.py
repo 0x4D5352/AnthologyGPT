@@ -136,6 +136,9 @@ Format your answer as an unordered markdown list like so:
     def have_conversation(
         self, characters: set[Character], context: str
     ) -> list[dict[str, str]]:
+        """
+        Generate a conversation between some set of characters, returning the resulting conversation.
+        """
         conversation = []
         participants = {}
         if len(characters) == 1:
