@@ -46,6 +46,28 @@ class History:
 
 
 class Faction:
+    """
+    A class representing factions within each Era of your anthology.
+
+    Attributes:
+    name
+    description
+    characters
+    _allies
+    _enemies
+    _history
+
+    Methods:
+    add_characters()
+    remove_characters()
+    add_allies()
+    remove_allies()
+    add_enemies()
+    remove_enemies()
+    get_character()
+    generate_summary()
+    """
+
     def __init__(
         self,
         name: str,
@@ -129,9 +151,9 @@ class Faction:
         context = (
             f"Faction Name: {self.name}. Description: {self.description}\nCharacters:"
         )
-        characters = "\n".join([
-            character.get_description() for character in self.characters.values()
-        ])
+        characters = "\n".join(
+            [character.get_description() for character in self.characters.values()]
+        )
         context += "\n" + characters
         # del characters
         if len(self._allies) > 0:
@@ -169,18 +191,25 @@ class Character:
     """
 
     def __init__(
-        self, name: str, age: str, pronouns: str, personality: str, description: str
+        self,
+        name: str,
+        age: str,
+        pronouns: str,
+        personality: str,
+        description: str,
+        faction: str,
     ):
         self.name: str = name
         self.age: str = age
         self.pronouns: str = pronouns
         self.personality: str = personality
         self.description: str = description
+        self.faction: str = faction
         self._conversations: dict[Character | set[Character], list[LLM]] = {}
         # TODO: get these set up for embeddings. see remember/feel for more docs
         self._memories: LLM = LLMFactory.get_llm()
         self._feelings: LLM = LLMFactory.get_llm()
-        self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is: {self.personality}."
+        self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is: {self.personality}. You are part of the following group: {self.faction}."
 
     def __repr__(self) -> str:
         return f"Character(name='{self.name}', age='{self.age}', gender='{self.pronouns}', personality='{self.personality}', description='{self.description}')"
@@ -208,19 +237,23 @@ class Character:
 
         conversation_index -= 1  # for indexing/OBO avoidance
         last_character = characters.pop()
-        list_of_characters = ", ".join([
-            f"{character.name} ({character.pronouns} pronouns)"
-            for character in characters
-        ])
+        list_of_characters = ", ".join(
+            [
+                f"{character.name} ({character.pronouns} pronouns)"
+                for character in characters
+            ]
+        )
         list_of_characters += f", and {last_character}"
         del last_character
         memory_of_characters = self.remember(
             f"What do you remember about these people? {list_of_characters}"
         )
-        self._conversations[characters][conversation_index].add_message({
-            "role": "system",
-            "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
-        })
+        self._conversations[characters][conversation_index].add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
+            }
+        )
         del (
             conversation_count,
             list_of_characters,
@@ -233,20 +266,26 @@ class Character:
         taking in the context as a prompt string, create an ephemeral LLM instance to generate a conclusion about the context - including relevant memories and feelings
         """
         current_thoughts = LLMFactory.get_llm()
-        current_thoughts.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate. Respond with a single sentence.",
-        })
+        current_thoughts.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate. Respond with a single sentence.",
+            }
+        )
         relevant_memories = self.remember(context)
-        current_thoughts.add_message({
-            "role": "user",
-            "content": f"memories: {relevant_memories}",
-        })
+        current_thoughts.add_message(
+            {
+                "role": "user",
+                "content": f"memories: {relevant_memories}",
+            }
+        )
         relevant_feelings = self.feel(context)
-        current_thoughts.add_message({
-            "role": "user",
-            "content": f"feeelings: {relevant_feelings}",
-        })
+        current_thoughts.add_message(
+            {
+                "role": "user",
+                "content": f"feeelings: {relevant_feelings}",
+            }
+        )
         conclusion = current_thoughts.generate_completion(context)
         del current_thoughts
         return conclusion["content"]
@@ -269,10 +308,12 @@ class Character:
         3. i could have a really small long term memory size and constantly summarize and re-embed the information.
         """
         indexer = LLMFactory.get_llm()
-        indexer.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
-        })
+        indexer.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
+            }
+        )
         for message in self._memories._messages:
             indexer.add_message(message)
         response = indexer.generate_completion(
@@ -295,10 +336,12 @@ class Character:
         - i could do some weird mutations
         """
         indexer = LLMFactory.get_llm()
-        indexer.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
-        })
+        indexer.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
+            }
+        )
         for message in self._memories._messages:
             indexer.add_message(message)
         response = indexer.generate_completion(
@@ -348,10 +391,12 @@ class Character:
 
     def add_to_memories(self, conversation: list[dict[str, str]]) -> None:
         summary = LLMFactory.get_llm()
-        summary.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
-        })
+        summary.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+            }
+        )
         for message in conversation:
             summary.add_message(message)
         response = summary.generate_completion(
@@ -361,10 +406,12 @@ class Character:
 
     def add_to_feelings(self, conversation: list[dict[str, str]]) -> None:
         summary = LLMFactory.get_llm()
-        summary.add_message({
-            "role": "system",
-            "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
-        })
+        summary.add_message(
+            {
+                "role": "system",
+                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+            }
+        )
         for message in conversation:
             summary.add_message(message)
         response = summary.generate_completion(

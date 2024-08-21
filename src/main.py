@@ -54,7 +54,7 @@ def generate_faction() -> Faction:
     return Faction(name=faction, description=description)
 
 
-def generate_characters() -> Character:
+def generate_characters(faction: str) -> Character:
     name = input("Character's Name:\n> ")
     age = input("Character's age:\n> ")
     pronouns = input("Character's pronouns:\n> ")
@@ -66,6 +66,7 @@ def generate_characters() -> Character:
         pronouns=pronouns,
         personality=personality,
         description=description,
+        faction=faction,
     )
 
 
@@ -84,16 +85,17 @@ def main() -> None:
         )
     print("Within each faction is a number of characters. You need at least two.")
     for faction in era.factions:
-        faction.add_characters(generate_characters())
+        faction.add_characters(generate_characters(faction.name))
         add_more = True
         while add_more:
-            faction.add_characters(generate_characters())
+            faction.add_characters(generate_characters(faction.name))
             add_more = (
                 False
                 if input("add another character? Y/N (default: N)\n> :")
                 in ["", "N", "n"]
                 else True
             )
+        print(faction.generate_summary())
     anthology.add_eras(era)
 
 

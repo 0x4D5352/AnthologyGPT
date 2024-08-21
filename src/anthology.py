@@ -228,5 +228,16 @@ class Anthology:
         for era in eras:
             self.add_eras(era)
 
-    def advance_era(self) -> None:
+    def advance_era(self, era: str) -> None:
+        starting_year = self._year
+        current_era = self._eras[era]
+        while self._year <= starting_year + current_era.duration:
+            self._year += current_era.advance_time()
+            current_era.generate_possible_events()
+            while len(current_era._events) > 0:
+                next_event = current_era._events.pop()
+                characters = current_era.get_characters()
+                current_era.have_conversation(characters, next_event)
+                # NOTE: EACH CHARACTER GIVES THEIR OWN FACTION THE HISTORY SO THE EVENT IS A LITTLE DIFFERENT EACH TIME
+
         return None
