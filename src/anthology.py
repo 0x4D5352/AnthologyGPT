@@ -246,8 +246,7 @@ class Anthology:
                     ].characters:
                         if other_character is character:
                             continue
-                        pass
-            # NOTE: here's where we add in history loss - for now, just randomly pick some and lose 'em
+                        character.add_to_memories([{"role": "user", "content": event}])
             for faction in current_era.factions.values():
                 lost_count = (
                     choice(range(len(faction._history._remembered_history))) // 4 + 1
@@ -255,4 +254,10 @@ class Anthology:
                 for _ in range(lost_count):
                     lost_event = choice(list(faction._history._remembered_history))
                     faction._history.lose_event(lost_event)
-        # NOTE: now we've gotten most things situated... need to figure out how to get faction histories to influence characters...  oh that can be up there
+                    for character in faction.characters.values():
+                        for index, memory in enumerate(character._memories._messages):
+                            if lost_event == memory["content"]:
+                                # TODO: make a lose memory method
+                                del character._memories._messages[index]
+        # NOTE: by this point i'm all the way done with advancing the era. events have happened, conversations have been had, events have been lost to history... now i can just summarize and be done?
+        self._summary = self.generate_summary()
