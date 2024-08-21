@@ -34,7 +34,7 @@ class Era:
         name: str,
         duration: int,
         theme: str,
-        factions: set[Faction] = set(),
+        factions: dict[str, Faction] = {},
     ) -> None:
         self.name = name
         self.duration = duration
@@ -48,17 +48,13 @@ class Era:
         """
         A simple wrapper around adding factions to the Era
         """
-        if faction in self.factions:
-            return
-        self.factions.add(faction)
+        self.factions[faction.name] = faction
 
     def remove_faction(self, faction: Faction) -> None:
         """
         A simple wrapper around removing factions from the Era
         """
-        if faction not in self.factions:
-            return
-        self.factions.remove(faction)
+        del self.factions[faction.name]
 
     def advance_time(self, inc: int = 1) -> int:
         """
@@ -77,7 +73,9 @@ class Era:
         """
         Use an LLM to generate events that could happen during the current Era that fits with the given theme.
         """
-        context = "\n".join([faction.generate_summary() for faction in self.factions])
+        context = "\n".join(
+            [faction.generate_summary() for faction in self.factions.values()]
+        )
         prompt = f"""
 Come up with a series of 5 to 10 events that could happen in the {self.name} era. The theme of this era is {self.theme}. Here are the following factions, their relationships, and their characters:
 {context}
@@ -123,10 +121,10 @@ Format your answer as an unordered markdown list like so:
         if len(names) == 0:
             character_count = choice(range(1, 5))
             while len(res) < character_count:
-                faction = choice(list(self.factions))
+                faction = choice(list(self.factions.values()))
                 res.add(faction.get_character())
             return res
-        for faction in self.factions:
+        for faction in self.factions.values():
             for name in names:
                 if name not in faction.characters:
                     continue
@@ -188,7 +186,7 @@ Format your answer as an unordered markdown list like so:
 
     def generate_summary(self) -> str:
         history = "\n".join(
-            [faction._history.generate_summary() for faction in self.factions]
+            [faction._history.generate_summary() for faction in self.factions.values()]
         )
         summary = generate_summary(history)
         # del history
@@ -238,6 +236,23 @@ class Anthology:
                 next_event = current_era._events.pop()
                 characters = current_era.get_characters()
                 current_era.have_conversation(characters, next_event)
-                # NOTE: EACH CHARACTER GIVES THEIR OWN FACTION THE HISTORY SO THE EVENT IS A LITTLE DIFFERENT EACH TIME
-
-        return None
+                for character in characters:
+                    event = character.think(
+                        "You are telling your faction about the most recent conversation you had. Generate a third person summary that your faction would add to their history. Keep the summary between one and three sentences. Only include the summary in your response."
+                    )
+                    current_era.factions[character.faction]._history.add_event(event)
+                    for other_character in current_era.factions[
+                        character.faction
+                    ].characters:
+                        if other_character is character:
+                            continue
+                        pass
+            # NOTE: here's where we add in history loss - for now, just randomly pick some and lose 'em
+            for faction in current_era.factions.values():
+                lost_count = (
+                    choice(range(len(faction._history._remembered_history))) // 4 + 1
+                )
+                for _ in range(lost_count):
+                    lost_event = choice(list(faction._history._remembered_history))
+                    faction._history.lose_event(lost_event)
+        # NOTE: now we've gotten most things situated... need to figure out how to get faction histories to influence characters...  oh that can be up there

@@ -177,6 +177,7 @@ class Character:
         pronouns
         personality
         description
+        faction
 
     Methods:
         start_conversation()
@@ -209,7 +210,7 @@ class Character:
         # TODO: get these set up for embeddings. see remember/feel for more docs
         self._memories: LLM = LLMFactory.get_llm()
         self._feelings: LLM = LLMFactory.get_llm()
-        self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is: {self.personality}. You are part of the following group: {self.faction}."
+        self.__descriptor: str = f"You are {self.name} ({self.pronouns} pronouns). You are a {self.age} year old {self.description}. Your personality is: {self.personality}. You are part of the following faction: {self.faction}."
 
     def __repr__(self) -> str:
         return f"Character(name='{self.name}', age='{self.age}', gender='{self.pronouns}', personality='{self.personality}', description='{self.description}')"
