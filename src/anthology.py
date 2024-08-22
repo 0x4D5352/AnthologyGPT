@@ -189,11 +189,6 @@ Format your answer as an unordered markdown list like so:
                 participants[active_character]["index"],
             )
             conversation.append(last_message)
-            convo = "\n".join([
-                message["content"] for message in conversation if len(conversation) > 0
-            ])
-            print(f"{convo}\n")
-
         convo = "\n".join([
             message["content"] for message in conversation if len(conversation) > 0
         ])
