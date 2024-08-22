@@ -153,4 +153,4 @@ def main(interactive: bool = True) -> None:
 
 if __name__ == "__main__":
     load_dotenv()
-    main(False)
+    main()
