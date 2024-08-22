@@ -84,7 +84,7 @@ def main() -> None:
             else True
         )
     print("Within each faction is a number of characters. You need at least two.")
-    for faction in era.factions:
+    for faction in era.factions.values():
         faction.add_characters(generate_characters(faction.name))
         add_more = True
         while add_more:
@@ -97,6 +97,8 @@ def main() -> None:
             )
         print(faction.generate_summary())
     anthology.add_eras(era)
+    anthology.advance_era(era.name)
+    print(anthology._summary)
 
 
 if __name__ == "__main__":
