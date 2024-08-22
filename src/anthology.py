@@ -262,7 +262,7 @@ class Anthology:
     def advance_era(self, era: str) -> None:
         starting_year = self._year
         current_era = self._eras[era]
-        while self._year <= starting_year + current_era.duration:
+        while self._year < starting_year + current_era.duration:
             self._year += current_era.advance_time()
             current_era.generate_possible_events()
             while len(current_era._events) > 0:
