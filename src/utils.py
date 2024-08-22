@@ -188,7 +188,7 @@ def generate_single_response(context: str) -> str:
 
 def generate_summary(context: str) -> str:
     prompt = f"Summarize the following information. Only respond with the summary, keeping your response to the minimum number of words required to create the summary.\n{context}"
-    return generate_summary(prompt)
+    return generate_single_response(prompt)
 
 
 def main():
