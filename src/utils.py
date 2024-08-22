@@ -1,7 +1,7 @@
 import json
 from time import sleep
 from pathlib import Path
-from dotenv import load_dotenv
+from os import getenv
 import requests
 
 
@@ -21,7 +21,7 @@ def save_summary(name: str, contents: str) -> None:
         f.write(contents)
 
 
-OPENAI_API_KEY = load_dotenv()
+OPENAI_API_KEY = getenv("OPENAI_API_KEY")
 EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY = {
     "model": "foo-345",
     "temperature": 1,

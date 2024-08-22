@@ -1,6 +1,6 @@
+from dotenv import load_dotenv
 from anthology import Anthology, Era
 from entities import Faction, Character
-from dotenv import load_dotenv
 
 
 def generate_setting() -> str:
