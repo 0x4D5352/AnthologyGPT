@@ -1,5 +1,6 @@
 from anthology import Anthology, Era
 from entities import Faction, Character
+from dotenv import load_dotenv
 
 
 def generate_setting() -> str:
@@ -70,36 +71,86 @@ def generate_characters(faction: str) -> Character:
     )
 
 
-def main() -> None:
-    anthology = generate_anthology()
-    print("Anthologies are comprised of Eras; a period of time with a common theme.")
-    era = generate_era()
-    print("Within each era is a number of factions. You need at least one.")
-    add_more = True
-    while add_more:
-        era.add_faction(generate_faction())
-        add_more = (
-            False
-            if input("add another faction? Y/N (default: N)\n> :") in ["", "N", "n"]
-            else True
+def main(interactive: bool = True) -> None:
+    if interactive:
+        anthology = generate_anthology()
+        print(
+            "Anthologies are comprised of Eras; a period of time with a common theme."
         )
-    print("Within each faction is a number of characters. You need at least two.")
-    for faction in era.factions.values():
-        faction.add_characters(generate_characters(faction.name))
+        era = generate_era()
+        print("Within each era is a number of factions. You need at least one.")
         add_more = True
         while add_more:
-            faction.add_characters(generate_characters(faction.name))
+            era.add_faction(generate_faction())
             add_more = (
                 False
-                if input("add another character? Y/N (default: N)\n> :")
-                in ["", "N", "n"]
+                if input("add another faction? Y/N (default: N)\n> ") in ["", "N", "n"]
                 else True
             )
-        print(faction.generate_summary())
+        print("Within each faction is a number of characters. You need at least two.")
+        for faction in era.factions.values():
+            faction.add_characters(generate_characters(faction.name))
+            add_more = True
+            while add_more:
+                faction.add_characters(generate_characters(faction.name))
+                add_more = (
+                    False
+                    if input("add another character? Y/N (default: N)\n> ")
+                    in ["", "N", "n"]
+                    else True
+                )
+            print(faction.generate_summary())
+    else:
+        anthology = Anthology("The Island", "Fantasy", "Island Nation")
+        era = Era("First", 1, "Betrayal")
+        north = Faction(
+            "North Islanders", "A stocky tribal group that live in the high mountains."
+        )
+        jarric = Character(
+            "Jarric Cloakstorm",
+            "45",
+            "He/Him",
+            "A cold and calculating leader with a fierce loyalty to his tribe and a caring demeanor underneath.",
+            "Tall, with long brown hair and blue eyes. He has multiple scars across his face.",
+            north.name,
+        )
+        wyndham = Character(
+            "Wyndham Cloakstorm",
+            "20",
+            "He/Him",
+            "A friendly and naive heir to the throne, untainted by the corruption of the world.",
+            "Tall, with long brown hair and blue eyes.",
+            north.name,
+        )
+        north.add_characters([jarric, wyndham])
+        era.add_faction(north)
+        south = Faction(
+            "South Islanders",
+            "A democratic group that inhabits the tropical coastline.",
+        )
+        moreen = Character(
+            "Moreen D'Archon",
+            "37",
+            "She/Her",
+            "A proud and noble Premier who would do anything to protect her people.",
+            "Short, dark-skinned, with curly brown hair and dark grey eyes.",
+            south.name,
+        )
+        folstik = Character(
+            "Folstik Dorner",
+            "31",
+            "He/Him",
+            "A wise scholar with poor social skills, who wishes to help whenever he can but often acts too cold for his own good.",
+            "Tall, lanky and red-haired with large spectacles and a disheveled-but-not-dirty appearance.",
+            south.name,
+        )
+        south.add_characters([moreen, folstik])
+        era.add_faction(south)
     anthology.add_eras(era)
     anthology.advance_era(era.name)
     print(anthology._summary)
 
 
 if __name__ == "__main__":
-    main()
+    load_dotenv()
+    main(False)

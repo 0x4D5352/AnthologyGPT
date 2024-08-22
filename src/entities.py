@@ -1,6 +1,13 @@
 from __future__ import annotations
 from random import random, choice
-from utils import LLM, LLMFactory, generate_summary, generate_single_response
+from utils import (
+    LLM,
+    LLMFactory,
+    generate_summary,
+    generate_single_response,
+    save_json,
+    save_summary,
+)
 
 LEGEND_CHANCE: float = 0.5
 
@@ -10,20 +17,25 @@ class History:
     A struct for sets of events, with a summary of the remembered history and legends.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, faction: str) -> None:
         self._actual_history: set[str] = set()
         self._lost_history: set[str] = set()
         self._remembered_history: set[str] = set()
         self._legends: set[str] = set()
         self._summary: str = ""
+        self._faction: str = faction
 
     def add_event(self, event: str) -> None:
         self._actual_history.add(event)
+        save_json(f"{self._faction}_actual_history", self._actual_history)
         self._remembered_history.add(event)
+        save_json(f"{self._faction}_remembered_history", self._remembered_history)
 
     def lose_event(self, event: str) -> None:
         self._remembered_history.remove(event)
+        save_json(f"{self._faction}_remembered_history", self._remembered_history)
         self._lost_history.add(event)
+        save_json(f"{self._faction}_lost_history", self._lost_history)
         if random() >= LEGEND_CHANCE:
             self.create_legend(event)
 
@@ -31,7 +43,9 @@ class History:
         legend = generate_single_response(
             f"Turn the following event into a legend. Mutate aspects of the story to transform it from a real event into some sort of myth or legend. {event}"
         )
+        print(f"new legend: {legend}")
         self._legends.add(legend)
+        save_json(f"{self._faction}_legends", self._legends)
 
     def generate_summary(self) -> str:
         history = "\n".join(self._remembered_history)
@@ -42,6 +56,8 @@ class History:
         context = history + legends
         summary = generate_summary(context)
         # del history, legends, context
+        print(f"history summary: {summary}")
+        save_summary(f"{self._faction}_history", summary)
         return summary
 
 
@@ -79,7 +95,7 @@ class Faction:
         self.characters = characters
         self._allies: set[Faction] = set()
         self._enemies: set[Faction] = set()
-        self._history = History()
+        self._history = History(self.name)
 
     def __str__(self) -> str:
         return f"Name: {self.name}\nDescription: {self.description}"
@@ -93,9 +109,9 @@ class Faction:
         if isinstance(characters, (list, set)):
             for character in characters:
                 self.characters[character.name] = character
-            return
-        self.characters[characters.name] = characters
-        return
+        else:
+            self.characters[characters.name] = characters
+        # save_json(f"{self.name}_characters", self.characters)
 
     def remove_characters(
         self, characters: Character | list[Character] | set[Character]
@@ -103,9 +119,9 @@ class Faction:
         if isinstance(characters, (list, set)):
             for character in characters:
                 del self.characters[character.name]
-            return
-        del self.characters[characters.name]
-        return
+        else:
+            del self.characters[characters.name]
+        # save_json(f"{self.name}_characters", self.characters)
 
     def get_character(self, name: str = "") -> Character:
         if name == "":
@@ -119,41 +135,41 @@ class Faction:
         if isinstance(allies, (list, set)):
             for ally in allies:
                 self._allies.add(ally)
-            return
-        self._allies.add(allies)
-        return
+        else:
+            self._allies.add(allies)
+        # save_json(f"{self.name}_allies", self._allies)
 
     def remove_allies(self, allies: Faction | list[Faction] | set[Faction]) -> None:
         if isinstance(allies, (list, set)):
             for ally in allies:
                 self._allies.remove(ally)
-            return
-        self._allies.remove(allies)
-        return
+        else:
+            self._allies.remove(allies)
+        # save_json(f"{self.name}_allies", self._allies)
 
     def add_enemies(self, enemies: Faction | list[Faction] | set[Faction]) -> None:
         if isinstance(enemies, (list, set)):
             for enemy in enemies:
                 self._enemies.add(enemy)
-            return
-        self._enemies.add(enemies)
-        return
+        else:
+            self._enemies.add(enemies)
+        # save_json(f"{self.name}_enemies", self._enemies)
 
     def remove_enemies(self, enemies: Faction | list[Faction] | set[Faction]) -> None:
         if isinstance(enemies, (list, set)):
             for enemy in enemies:
                 self._enemies.remove(enemy)
-            return
-        self._enemies.remove(enemies)
-        return
+        else:
+            self._enemies.remove(enemies)
+        # save_json(f"{self.name}_enemies", self._enemies)
 
     def generate_summary(self) -> str:
         context = (
             f"Faction Name: {self.name}. Description: {self.description}\nCharacters:"
         )
-        characters = "\n".join(
-            [character.get_description() for character in self.characters.values()]
-        )
+        characters = "\n".join([
+            character.get_description() for character in self.characters.values()
+        ])
         context += "\n" + characters
         # del characters
         if len(self._allies) > 0:
@@ -164,7 +180,10 @@ class Faction:
             enemies = "\n".join([enemy.name for enemy in self._enemies])
             context += "\n" + enemies
             # del enemies
-        return generate_summary(context)
+        response = generate_summary(context)
+        print(f"faction summary: {response}")
+        save_summary(f"{self.name}_summary", response)
+        return response
 
 
 class Character:
@@ -206,7 +225,7 @@ class Character:
         self.personality: str = personality
         self.description: str = description
         self.faction: str = faction
-        self._conversations: dict[Character | set[Character], list[LLM]] = {}
+        self._conversations: dict[frozenset[Character], list[LLM]] = {}
         # TODO: get these set up for embeddings. see remember/feel for more docs
         self._memories: LLM = LLMFactory.get_llm()
         self._feelings: LLM = LLMFactory.get_llm()
@@ -215,7 +234,7 @@ class Character:
     def __repr__(self) -> str:
         return f"Character(name='{self.name}', age='{self.age}', gender='{self.pronouns}', personality='{self.personality}', description='{self.description}')"
 
-    def start_conversation(self, characters: set[Character]) -> int:
+    def start_conversation(self, characters: frozenset[Character]) -> int:
         """
         Create a new conversation between your character and one or more other characters. To track the conversation, the index is returned for future use.
         """
@@ -237,29 +256,26 @@ class Character:
                 conversation_count = f"{conversation_index + 1}th"
 
         conversation_index -= 1  # for indexing/OBO avoidance
-        last_character = characters.pop()
-        list_of_characters = ", ".join(
-            [
-                f"{character.name} ({character.pronouns} pronouns)"
-                for character in characters
-            ]
-        )
+        all_characters = list(characters)
+        last_character = all_characters.pop()
+        list_of_characters = ", ".join([
+            f"{character.name} ({character.pronouns} pronouns)"
+            for character in all_characters
+        ])
         list_of_characters += f", and {last_character}"
-        del last_character
+        # del last_character, all_characters
         memory_of_characters = self.remember(
             f"What do you remember about these people? {list_of_characters}"
         )
-        self._conversations[characters][conversation_index].add_message(
-            {
-                "role": "system",
-                "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
-            }
-        )
-        del (
-            conversation_count,
-            list_of_characters,
-            memory_of_characters,
-        )
+        self._conversations[characters][conversation_index].add_message({
+            "role": "system",
+            "content": f"{self.__descriptor} You're having your {conversation_count} conversation with {list_of_characters}. You know this about them: {memory_of_characters}. Reply in character based on the conversation history and the context provided by the user. Only respond with dialogue, and keep your responses between one word and one paragraph in length. Make sure every participant has had a chance to speak, but if the conversation has gone on long enough, end your message with the string </SCENE>. Prefix all your messages with your name like so: {self.name}: [TEXT]",
+        })
+        # del (
+        #     conversation_count,
+        #     list_of_characters,
+        #     memory_of_characters,
+        # )
         return conversation_index
 
     def think(self, context: str) -> str:
@@ -267,28 +283,23 @@ class Character:
         taking in the context as a prompt string, create an ephemeral LLM instance to generate a conclusion about the context - including relevant memories and feelings
         """
         current_thoughts = LLMFactory.get_llm()
-        current_thoughts.add_message(
-            {
-                "role": "system",
-                "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate. Respond with a single sentence.",
-            }
-        )
+        current_thoughts.add_message({
+            "role": "system",
+            "content": f"{self.__descriptor}. You are about to be given a new piece of information by the user. Think about the information, reflect on your memories and feelings, and come to a conclusion about the information in a way that reflects who you are, describing any justifications, rationale, or emotional response that is appropriate. Respond with a single sentence.",
+        })
         relevant_memories = self.remember(context)
-        current_thoughts.add_message(
-            {
-                "role": "user",
-                "content": f"memories: {relevant_memories}",
-            }
-        )
+        current_thoughts.add_message({
+            "role": "user",
+            "content": f"memories: {relevant_memories}",
+        })
         relevant_feelings = self.feel(context)
-        current_thoughts.add_message(
-            {
-                "role": "user",
-                "content": f"feeelings: {relevant_feelings}",
-            }
-        )
+        current_thoughts.add_message({
+            "role": "user",
+            "content": f"feeelings: {relevant_feelings}",
+        })
         conclusion = current_thoughts.generate_completion(context)
-        del current_thoughts
+        # del current_thoughts
+        print(f"thoughts: {conclusion["content"]}")
         return conclusion["content"]
 
     # TODO: wrap think, feel, and remember in "access_brain" methods
@@ -309,18 +320,17 @@ class Character:
         3. i could have a really small long term memory size and constantly summarize and re-embed the information.
         """
         indexer = LLMFactory.get_llm()
-        indexer.add_message(
-            {
-                "role": "system",
-                "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
-            }
-        )
+        indexer.add_message({
+            "role": "system",
+            "content": f"{self.__descriptor}. Below is a list of memories that you have. Answer the user's questions based on the memories. If there are no messages between this message and the context, respond with 'nothing'.",
+        })
         for message in self._memories._messages:
             indexer.add_message(message)
         response = indexer.generate_completion(
             f"What memories are relevant to the context listed below? Do not quote them directly, only summarize and highlight key points. Limit your response to one short paragraph or less. Context: {context}"
         )
-        del indexer
+        # del indexer
+        print(f"memories: {response["content"]}")
         return response["content"]
 
     def feel(self, context: str) -> str:
@@ -337,23 +347,22 @@ class Character:
         - i could do some weird mutations
         """
         indexer = LLMFactory.get_llm()
-        indexer.add_message(
-            {
-                "role": "system",
-                "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
-            }
-        )
+        indexer.add_message({
+            "role": "system",
+            "content": f"{self.__descriptor}. Below is a list of feelings that you have. Answer the user's questions based on the feelings. If there are no messages between this message and the context, respond with 'nothing'.",
+        })
         for message in self._memories._messages:
             indexer.add_message(message)
         response = indexer.generate_completion(
             f"What feelings are relevant to the context listed below? Do not quote them directly, only summarize and highlight key points. Limit your response to one short paragraph or less. Context: {context}"
         )
-        del indexer
+        # del indexer
+        print(f"feelings: {response["content"]}")
         return response["content"]
 
     def speak(
         self,
-        characters: set[Character],
+        characters: frozenset[Character],
         conversation_index: int,
         context: str = "",
     ) -> dict[str, str]:
@@ -372,11 +381,12 @@ class Character:
             message = self._conversations[characters][
                 conversation_index
             ].generate_completion()
+        print(f"{message["content"]}\n")
         return message
 
     def listen(
         self,
-        characters: set[Character],
+        characters: frozenset[Character],
         conversation_index: int,
         messages: dict[str, str] | list[dict[str, str]],
     ) -> None:
@@ -392,38 +402,42 @@ class Character:
 
     def add_to_memories(self, conversation: list[dict[str, str]]) -> None:
         summary = LLMFactory.get_llm()
-        summary.add_message(
-            {
-                "role": "system",
-                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
-            }
-        )
+        summary.add_message({
+            "role": "system",
+            "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+        })
         for message in conversation:
             summary.add_message(message)
         response = summary.generate_completion(
             "Summarize the conversation above. Limit your response to one short paragraph, and only include the most essential information."
         )["content"]
+        print(f"adding to memories: {response}")
         self._memories.add_message({"role": "user", "content": response})
+        save_json(f"{self.name}_memories", self._memories._messages)
 
     def add_to_feelings(self, conversation: list[dict[str, str]]) -> None:
         summary = LLMFactory.get_llm()
-        summary.add_message(
-            {
-                "role": "system",
-                "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
-            }
-        )
+        summary.add_message({
+            "role": "system",
+            "content": f"{self.__descriptor}. Below is a conversation between two characters, one of whom is you.",
+        })
         for message in conversation:
             summary.add_message(message)
         response = summary.generate_completion(
             "Summarize your feelings about the conversation above. Use abstract associations, connecting specific people or events with specific emotions. Use single words, avoid complete sentences."
         )["content"]
-        self._memories.add_message({"role": "user", "content": response})
+        print(f"adding to feelings: {response}")
+        self._feelings.add_message({"role": "user", "content": response})
+        save_json(f"{self.name}_feelings", self._feelings._messages)
 
     def end_conversation(
-        self, characters: set[Character], conversation_index: int
+        self, characters: frozenset[Character], conversation_index: int
     ) -> None:
         convo = self._conversations[characters][conversation_index]._messages
+        save_json(
+            f"{self.name}_conversation_{"_".join([character.name for character in characters])}",
+            convo,
+        )
         self.add_to_memories(convo)
         self.add_to_feelings(convo)
 

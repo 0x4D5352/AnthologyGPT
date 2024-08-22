@@ -1,7 +1,7 @@
 from __future__ import annotations
 from random import choice
 from entities import Faction, Character
-from utils import generate_single_response, generate_summary
+from utils import generate_single_response, generate_summary, save_json, save_summary
 
 
 class Era:
@@ -42,19 +42,21 @@ class Era:
         self.factions = factions
         self._year: int = 0
         self._summary: str = ""
-        self._events: list = []
+        self._events: list[str] = []
 
     def add_faction(self, faction: Faction) -> None:
         """
         A simple wrapper around adding factions to the Era
         """
         self.factions[faction.name] = faction
+        # save_json(f"{self.name}_factions", self.factions)
 
     def remove_faction(self, faction: Faction) -> None:
         """
         A simple wrapper around removing factions from the Era
         """
         del self.factions[faction.name]
+        # save_json(f"{self.name}_factions", self.factions)
 
     def advance_time(self, inc: int = 1) -> int:
         """
@@ -73,9 +75,9 @@ class Era:
         """
         Use an LLM to generate events that could happen during the current Era that fits with the given theme.
         """
-        context = "\n".join(
-            [faction.generate_summary() for faction in self.factions.values()]
-        )
+        context = "\n".join([
+            faction.generate_summary() for faction in self.factions.values()
+        ])
         prompt = f"""
 Come up with a series of 5 to 10 events that could happen in the {self.name} era. The theme of this era is {self.theme}. Here are the following factions, their relationships, and their characters:
 {context}
@@ -85,10 +87,17 @@ Format your answer as an unordered markdown list like so:
 - event c
 """
         result = generate_single_response(prompt)
+        print(f"events: {result}\n")
         events = result.split("- ")[1:]
         for event in events:
             event.strip()
             self._events.append(event)
+        save_json(f"{self.name}_events", self._events)
+
+    def get_next_event(self) -> str:
+        next = self._events.pop()
+        save_json(f"{self.name}_events", self._events)
+        return next
 
     def add_event(
         self, factions: Faction | list[Faction] | set[Faction], event: str
@@ -137,21 +146,25 @@ Format your answer as an unordered markdown list like so:
         """
         Generate a conversation between some set of characters, returning the resulting conversation.
         """
-        conversation = []
+        print(
+            f"starting a convo with {" ".join([character.name for character in characters])}"
+        )
+        conversation: list[dict[str, str]] = []
         participants = {}
         if len(characters) == 1:
             # a monologue!
             active_character = characters.copy().pop()
+            others = frozenset(characters)
             participants[active_character] = {
-                "others": {active_character},
-                "index": active_character.start_conversation({active_character}),
+                "others": others,
+                "index": active_character.start_conversation(others),
             }
             context = (
                 f"You are thinking aloud to yourself about the following:\n{context}"
             )
         else:
             for character in characters:
-                others = characters - {character}
+                others = frozenset(characters - {character})
                 participants[character] = {
                     "others": others,
                     "index": character.start_conversation(others),
@@ -162,12 +175,8 @@ Format your answer as an unordered markdown list like so:
             participants[active_character]["index"],
             context,
         )
+        conversation.append(last_message)
         while "</SCENE>" not in last_message["content"]:
-            conversation.append(last_message)
-            last_message = active_character.speak(
-                participants[active_character]["others"],
-                participants[active_character]["index"],
-            )
             for character in participants[active_character]["others"]:
                 character.listen(
                     participants[character]["others"],
@@ -175,8 +184,32 @@ Format your answer as an unordered markdown list like so:
                     last_message,
                 )
             active_character = choice(list(characters))
-        if last_message != conversation[-1]:
+            last_message = active_character.speak(
+                participants[active_character]["others"],
+                participants[active_character]["index"],
+            )
             conversation.append(last_message)
+            convo = "\n".join([
+                message["content"] for message in conversation if len(conversation) > 0
+            ])
+            print(f"{convo}\n")
+
+        convo = "\n".join([
+            message["content"] for message in conversation if len(conversation) > 0
+        ])
+        print(f"{convo}\n")
+        try:
+            if last_message != conversation[-1]:
+                conversation.append(last_message)
+                for character in participants[active_character]["others"]:
+                    character.listen(
+                        participants[character]["others"],
+                        participants[character]["index"],
+                        last_message,
+                    )
+        except IndexError as e:
+            print("something's happening with this convo...")
+            print(e)
         for character in characters:
             character.end_conversation(
                 participants[character]["others"],
@@ -185,11 +218,13 @@ Format your answer as an unordered markdown list like so:
         return conversation
 
     def generate_summary(self) -> str:
-        history = "\n".join(
-            [faction._history.generate_summary() for faction in self.factions.values()]
-        )
+        history = "\n".join([
+            faction._history.generate_summary() for faction in self.factions.values()
+        ])
         summary = generate_summary(history)
         # del history
+        print(summary)
+        save_summary(f"{self.name}_summary", summary)
         return summary
 
 
@@ -214,6 +249,8 @@ class Anthology:
         history = "\n".join([era._summary for era in self._eras.values()])
         summary = generate_summary(history)
         # del history
+        print(f"anthology summary: {summary}")
+        save_summary(f"{self.name}_summary", summary)
         return summary
 
     def create_era(self, name: str, duration: int, theme: str) -> None:
@@ -222,9 +259,10 @@ class Anthology:
     def add_eras(self, eras: Era | list[Era]) -> None:
         if isinstance(eras, Era):
             self._eras[eras.name] = eras
-            return
-        for era in eras:
-            self.add_eras(era)
+        else:
+            for era in eras:
+                self.add_eras(era)
+        # save_json(f"{self.name}_eras", self._eras)
 
     def advance_era(self, era: str) -> None:
         starting_year = self._year
@@ -233,7 +271,7 @@ class Anthology:
             self._year += current_era.advance_time()
             current_era.generate_possible_events()
             while len(current_era._events) > 0:
-                next_event = current_era._events.pop()
+                next_event = current_era.get_next_event()
                 characters = current_era.get_characters()
                 current_era.have_conversation(characters, next_event)
                 for character in characters:
@@ -259,5 +297,4 @@ class Anthology:
                             if lost_event == memory["content"]:
                                 # TODO: make a lose memory method
                                 del character._memories._messages[index]
-        # NOTE: by this point i'm all the way done with advancing the era. events have happened, conversations have been had, events have been lost to history... now i can just summarize and be done?
         self._summary = self.generate_summary()

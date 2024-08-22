@@ -1,8 +1,27 @@
+import json
+from time import sleep
+from pathlib import Path
 from dotenv import load_dotenv
 import requests
-from env import OPENAI_API_KEY
 
-# OPENAI_API_KEY = load_dotenv()
+
+def save_json(name: str, contents: list | dict | set | frozenset) -> None:
+    if isinstance(contents, (set, frozenset)):
+        contents = list(contents)
+    path = Path(f"./logs/{name}.json")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as f:
+        f.write(json.dumps(contents))
+
+
+def save_summary(name: str, contents: str) -> None:
+    path = Path(f"./logs/{name}.summary")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as f:
+        f.write(contents)
+
+
+OPENAI_API_KEY = load_dotenv()
 EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY = {
     "model": "foo-345",
     "temperature": 1,
@@ -123,6 +142,8 @@ class OpenAI(LLM):
         """
         generate a chat completion response based on the prompt and the existing chat history for the model.
         """
+        # NOTE: sleeping to be polite with rate limits. local models don't care.
+        sleep(5)
         endpoint = self.endpoint + "chat/completions"
         request = EXAMPLE_OPENAI_COMPLETION_REQUEST_BODY.copy()
         for setting in self._settings.keys():
@@ -135,6 +156,8 @@ class OpenAI(LLM):
             url=endpoint, json=request, headers=self.headers
         ).json()
         # TODO: handle the case of a JSON error
+        if "choices" not in response:
+            raise ValueError(f"OpenAI failed to generate a response! JSON: {response}")
         response_message = response["choices"][0]["message"]
         if response_message["refusal"] is not None:
             raise ValueError(
